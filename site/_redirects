@@ -1,0 +1,26 @@
+# grantwilliams.ai v1 — Cloudflare Pages redirects
+# Old-site slugs -> the new single-page layout.
+
+# dead drafts and retired pages
+/home-orig / 301
+/home-1 / 301
+/home-2 / 301
+/home-2-1-1 / 301
+/home / 301
+/services / 301
+/aboutorig / 301
+/projectsorig / 301
+/careerorig /career/ 301
+/researchorig / 301
+/contactorig / 301
+/the-infinite-proch / 301
+
+# old top-level pages -> home sections
+/about /#about 301
+/projects /#work 301
+/research /#research 301
+/connect /#connect 301
+
+# The Lounge lives at its own site (Grant's ruling 2026-08-16).
+/ai-kinship https://aikinship.org/ 301
+/ai-kinship/* https://aikinship.org/ 301
