@@ -716,3 +716,17 @@ a.game-status:hover { border-color: var(--gold); background: var(--gold); color:
   .pull-quote { font-size: 1.25rem; }
   .idea-section { padding-top: 2.25rem; }
 }
+
+/* ============ IDEAS FEATURED PANEL (homepage) ============ */
+a.ideas-panel { display: flex; gap: 2.25rem; align-items: flex-start;
+  border: 1px solid var(--line-gold); background: var(--bg-panel);
+  padding: 2.25rem 2.5rem; margin: 0 0 2.5rem; text-decoration: none; color: inherit;
+  transition: border-color 0.3s var(--ease-out), background 0.3s var(--ease-out), transform 0.3s var(--ease-out); }
+a.ideas-panel:hover { border-color: var(--gold); background: var(--bg-lift); transform: translateY(-2px); }
+.ideas-panel h3 { font-family: var(--display); font-size: 1.5rem; font-weight: 600; margin: 0 0 0.85rem; color: var(--ink); }
+.ideas-panel-quote { font-family: var(--display); font-style: italic; font-weight: 500;
+  font-size: clamp(1.2rem, 2.2vw, 1.4rem); line-height: 1.5; color: var(--gold-bright); margin: 0 0 1rem; }
+.ideas-panel-sub { color: var(--ink-dim); margin: 0 0 1.1rem; }
+.ideas-panel .genie-bottle { flex: none; margin-top: 0.3rem; }
+a.ideas-panel:hover .door-enter { color: var(--gold-bright); }
+@media (max-width: 640px) { a.ideas-panel { flex-direction: column; gap: 1.25rem; padding: 1.75rem; } }
