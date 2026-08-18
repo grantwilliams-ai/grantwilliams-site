@@ -689,3 +689,30 @@ a.game-status:hover { border-color: var(--gold); background: var(--gold); color:
   .door:hover, .room-card:hover { transform: none; }
   .door:hover .door-preview img { transform: none; }
 }
+
+/* ============ IDEAS PAGE ============ */
+.ideas-head { text-align: left; }
+.ideas-emblem svg { display: block; margin-bottom: 1.25rem; }
+.ideas-emblem .wisp { animation: wisp-drift 18s ease-in-out infinite alternate; }
+@keyframes wisp-drift { from { transform: translateY(0); opacity: 0.5; } to { transform: translateY(-4px); opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { .ideas-emblem .wisp { animation: none; } }
+
+.idea-section { border-top: 1px solid var(--line-gold); padding-top: 3rem; position: relative; }
+.idea-section::before {
+  content: ""; position: absolute; top: -1px; left: 0; width: 4.5rem; height: 3px;
+  background: var(--gold);
+}
+.idea-sub { font-family: var(--body-face); font-size: 1.0625rem; color: var(--ink-faint); margin: 0.35rem 0 1.5rem; }
+.pull-quote {
+  font-family: var(--display); font-style: italic; font-weight: 500;
+  font-size: clamp(1.35rem, 2.6vw, 1.75rem); line-height: 1.45;
+  color: var(--gold-bright); margin: 0 0 1.75rem; padding: 0.25rem 0 0.25rem 1.25rem;
+  border-left: 2px solid var(--gold-deep);
+}
+.pull-quote.closing { border-left: none; padding-left: 0; text-align: left; color: var(--gold-bright); }
+.idea-closing { border-top: 1px solid var(--line-gold); padding-top: 3rem; }
+.idea-connective { color: var(--ink-faint); font-size: 1.0625rem; }
+@media (max-width: 540px) {
+  .pull-quote { font-size: 1.25rem; }
+  .idea-section { padding-top: 2.25rem; }
+}
