@@ -15,10 +15,38 @@ const GAMES = [
     status: "playable now",
     playUrl: "/games/run-run-robots/",
     description:
-      "A small arcade game of pursuit and escape.",
+      "A small arcade game of pursuit and escape. Newly updated build.",
     screenshot: "/assets/img/games/run-run-robots-glasshouse.jpg",
     screenshotAlt: "The Glasshouse level: bright planter aisles patrolled by two arachnid robots.",
     attract: "chase" // fallback animation if no screenshot is set
+  },
+  {
+    slug: "swing",
+    name: "Swing",
+    essence: "Do you swing?",
+    maker: "Grant Williams",
+    withNote: "built in collaboration with AI",
+    status: "playable now",
+    playUrl: "/games/swing/",
+    description:
+      "A first-person swing under your choice of sky, from meadow to Milky Way. Lean back and the ground drops away; rush down; fly up into the sky.",
+    screenshot: "/assets/img/games/swing-stars.jpg",
+    screenshotAlt: "The Stars scene: the Milky Way over desert rocks, a bright moon rising.",
+    attract: "chase"
+  },
+  {
+    slug: "great-white-shark",
+    name: "Great White Shark",
+    essence: "The ocean is not empty.",
+    maker: "Grant Williams",
+    withNote: "built in collaboration with AI",
+    status: "playable now",
+    playUrl: "/games/great-white-shark/",
+    description:
+      "An open ocean, one shark, and your cursor. Move it or tap to draw the shark in. Headphones recommended.",
+    screenshot: "/assets/img/games/great-white-shark.jpg",
+    screenshotAlt: "A great white shark cruising beneath the surface light.",
+    attract: "chase"
   }
 ];
 

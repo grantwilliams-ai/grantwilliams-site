@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Swing</title>
+<!--
+  Swing — a first-person swing over real photographs.
+  Built 2026-10-25 by Claude Fable 5.1 for Grant; night scenes, moon, stars, leaves and the lake added the same day.
+  Scenes are CC0 panoramas from Poly Haven (polyhaven.com):
+    meadow_2 (Meadow, day), dry_orchard_meadow (Orchard, day), moonlit_golf (Night),
+    rogland_clear_night (Stars), dark_autumn_forest (Autumn wood), lakeside_night (Lake, night), lakeside_dawn (Lake, dawn).
+  The stars, the moon, its path on the water, the falling leaves and the shooting stars are drawn by the page.
+  Everything is in this one file: no network, no libraries.
+  Source template and build script: work/agent-staging/claude/2026-10-25_swing/src/
+-->
+<style>
+  :root {
+    --fg: #f6f3ea;
+    --bg: #07080a;
+    --panel: rgba(8, 9, 12, 0.78);
+    --line: rgba(246, 243, 234, 0.55);
+    --on: #f6f3ea;
+    --on-fg: #0b0c10;
+    --accent: #ffd34d;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font-family: var(--font); overflow: hidden; }
+  canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; background: #000; }
+  canvas#over { position: fixed; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; z-index: 5; }
+  canvas#view.hidecursor { cursor: none; }
+
+  /* ---- start screen ---- */
+  #start {
+    position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 22px; background: radial-gradient(ellipse at 50% 40%, #1a2230 0%, #07080a 70%); padding: 24px; text-align: center;
+    z-index: 20; transition: opacity 0.9s ease;
+  }
+  #start.gone { opacity: 0; pointer-events: none; }
+  #start { overflow: auto; justify-content: safe center; }
+  #start h1 { font-size: 54px; margin: 0; letter-spacing: 0.02em; font-weight: 700; }
+  #start p { font-size: 22px; line-height: 1.45; margin: 0; max-width: 720px; color: #d9d5c8; }
+  #start .big {
+    font: 700 30px/1 var(--font); padding: 22px 56px; border-radius: 16px; border: 3px solid var(--fg);
+    background: var(--fg); color: var(--on-fg); cursor: pointer; min-width: 280px;
+  }
+  #start .big:disabled { opacity: 0.55; cursor: progress; }
+  #start .big:focus-visible, button:focus-visible { outline: 4px solid var(--accent); outline-offset: 4px; }
+  #start .small { font-size: 18px; color: #b9b5a8; }
+  #start .pick { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; max-width: 900px; }
+  #start .pick .label { width: 100%; text-align: center; margin: 4px 0 -4px; opacity: 0.75; }
+  #bar { width: 320px; height: 10px; border: 2px solid var(--line); border-radius: 6px; overflow: hidden; }
+  #bar > div { height: 100%; width: 0%; background: var(--fg); transition: width 0.2s; }
+
+  /* ---- control bar ---- */
+  #hud {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; justify-content: center;
+    padding: 14px 16px 18px; pointer-events: none; transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  #hud.hidden { opacity: 0; transform: translateY(12px); }
+  #hud .bar {
+    pointer-events: auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 16px;
+    background: var(--panel); border: 2px solid var(--line); border-radius: 18px; padding: 12px 16px;
+    backdrop-filter: blur(6px); max-width: 1240px; max-height: calc(100vh - 40px); overflow: auto;
+  }
+  #hud.hidden .bar { pointer-events: none; }
+  .group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .label { font-size: 19px; font-weight: 700; margin-right: 4px; opacity: 0.9; white-space: nowrap; }
+  button.pill, button.box {
+    font: 700 20px/1 var(--font); color: var(--fg); background: transparent; border: 3px solid var(--line);
+    border-radius: 14px; padding: 14px 18px; cursor: pointer; min-height: 56px; white-space: nowrap;
+  }
+  button.pill[aria-pressed="true"] { background: var(--on); color: var(--on-fg); border-color: var(--on); }
+  button.box { min-width: 64px; font-size: 28px; padding: 8px 0; }
+  #speedRead { font-size: 22px; font-weight: 700; min-width: 110px; text-align: center; font-variant-numeric: tabular-nums; }
+  .meter { display: flex; gap: 4px; }
+  .meter i { display: block; width: 12px; height: 22px; border: 2px solid var(--line); border-radius: 3px; }
+  .meter i.lit { background: var(--fg); border-color: var(--fg); }
+  #help {
+    position: fixed; top: 16px; right: 16px; z-index: 10; background: var(--panel); border: 2px solid var(--line);
+    border-radius: 14px; padding: 14px 18px; font-size: 18px; line-height: 1.5; max-width: 460px; transition: opacity 0.5s;
+  }
+  #help.hidden { opacity: 0; pointer-events: none; }
+  #help b { color: var(--accent); }
+  #toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 12; background: var(--panel);
+    border: 2px solid var(--line); border-radius: 12px; padding: 12px 22px; font-size: 22px; font-weight: 700;
+    opacity: 0; transition: opacity 0.3s; pointer-events: none;
+  }
+  #toast.show { opacity: 1; }
+  @media (max-width: 760px) {
+    #start h1 { font-size: 40px; } #start p { font-size: 19px; }
+    .label { display: none; } button.pill, button.box { font-size: 18px; padding: 12px 14px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+<canvas id="over"></canvas>
+
+<div id="start">
+  <h1>Swing</h1>
+  <p>You are on the seat, looking through your own eyes. Lean back and the ground drops away; rush down; fly up into the sky.</p>
+  <div class="pick" role="group" aria-label="Place">
+    <button class="pill" data-scene="meadow" aria-pressed="true">Meadow, day</button>
+    <button class="pill" data-scene="orchard" aria-pressed="false">Orchard, day</button>
+    <button class="pill" data-scene="lakedawn" aria-pressed="false">Lake, dawn</button>
+    <button class="pill" data-scene="autumn" aria-pressed="false">Autumn wood</button>
+    <button class="pill" data-scene="night" aria-pressed="false">Night</button>
+    <button class="pill" data-scene="stars" aria-pressed="false">Stars</button>
+    <button class="pill" data-scene="lakenight" aria-pressed="false">Lake, night</button>
+  </div>
+  <button class="big" id="go" disabled>Loading…</button>
+  <div id="bar"><div></div></div>
+  <p class="small">Full screen gives the strongest feeling. Press <b>F</b> any time. The controls hide themselves; moving the mouse brings them back, Hide puts them away. Any place can be turned to dusk with <b>D</b>.</p>
+</div>
+
+<div id="hud" inert>
+  <div class="bar">
+    <div class="group" role="group" aria-label="Place">
+      <button class="pill" data-scene="meadow" aria-pressed="true">Meadow</button>
+      <button class="pill" data-scene="orchard" aria-pressed="false">Orchard</button>
+      <button class="pill" data-scene="lakedawn" aria-pressed="false">Lake, dawn</button>
+      <button class="pill" data-scene="autumn" aria-pressed="false">Autumn wood</button>
+      <button class="pill" data-scene="night" aria-pressed="false">Night</button>
+      <button class="pill" data-scene="stars" aria-pressed="false">Stars</button>
+      <button class="pill" data-scene="lakenight" aria-pressed="false">Lake, night</button>
+    </div>
+    <div class="group" aria-label="Speed">
+      <span class="label">Speed</span>
+      <button class="box" id="slower" aria-label="Slower">−</button>
+      <div class="meter" id="meter" aria-hidden="true"></div>
+      <button class="box" id="faster" aria-label="Faster">+</button>
+      <span id="speedRead">6 of 10</span>
+    </div>
+    <div class="group" aria-label="Night">
+      <button class="pill" id="dusk" aria-pressed="false">Dusk</button>
+      <button class="pill" id="moon" aria-pressed="false">Moon</button>
+    </div>
+    <div class="group">
+      <button class="pill" id="sound" aria-pressed="false">Sound off</button>
+      <button class="pill" id="pause" aria-pressed="false">Pause</button>
+      <button class="pill" id="full">Full screen</button>
+      <button class="pill" id="helpBtn" aria-pressed="false">Keys</button>
+      <button class="pill" id="hide">Hide</button>
+    </div>
+  </div>
+</div>
+
+<div id="help" class="hidden">
+  <b>Space</b> pause · <b>F</b> full screen · <b>↑ ↓</b> or <b>+ −</b> speed<br>
+  <b>1 – 7</b> the places in order · <b>N</b> next place<br>
+  <b>D</b> dusk on/off · <b>M</b> moon on/off · <b>L</b> falling leaves on/off<br>
+  <b>S</b> sound · <b>C</b> chain creak on/off · <b>O</b> owl on/off<br>
+  <b>W</b> wider / narrower view · <b>[ ]</b> shorter / longer swing<br>
+  <b>B</b> clear view (no smear, no rush shading)<br>
+  <b>H</b> hide the controls (move the mouse to bring them back) · <b>K</b> this list
+</div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   1. Scenes. The pictures are embedded by the build script.
+      night: the picture was taken at night. dusk: start darkened (D toggles).
+      stars/moon: the page's own stars and moon are allowed and whether they start on.
+      skyLum: a photo pixel above the horizon brighter than this counts as open sky
+      (stars and the moon show only there, never over the trees).
+      water: the ground plane is water beyond waterFrom metres (the moon's path).
+   ============================================================ */
+const SCENES = {
+  meadow:    { name: "Meadow",       src: "scenes/meadow.jpg",     night: 0, captureHeight: 1.65, yaw: 0.00,  exposure: 1.00, horizonFade: [28, 70], creakGain: 1.0, skyLum: 0.55 },
+  orchard:   { name: "Orchard",      src: "scenes/orchard.jpg",    night: 0, captureHeight: 1.60, yaw: 0.00,  exposure: 1.00, horizonFade: [28, 70], creakGain: 1.0, skyLum: 0.55 },
+  lakedawn:  { name: "Lake, dawn",   src: "scenes/lakedawn.jpg",  night: 0, captureHeight: 1.60, yaw: -0.12, exposure: 1.00, horizonFade: [10, 30], creakGain: 1.0, skyLum: 0.50, water: 1, waterFrom: 1.6,
+               moonDir: [0.72, 0.52, 0.25] },
+  autumn:    { name: "Autumn wood",  src: "scenes/autumn.jpg",     night: 0, captureHeight: 1.60, yaw: 0.00,  exposure: 1.00, horizonFade: [12, 34], creakGain: 1.1, skyLum: 0.62,
+               dusk: 1, leaves: 1, owl: 1, moonDir: [0.55, 0.62, -0.30], moon: 1 },
+  night:     { name: "Night",        src: "scenes/night.jpg",      night: 1, captureHeight: 1.60, yaw: -0.23, exposure: 1.15, horizonFade: [24, 60], creakGain: 0.8, skyLum: 0.10, moonInPhoto: 1 },
+  stars:     { name: "Stars",        src: "scenes/stars.jpg",      night: 1, captureHeight: 1.60, yaw: 0.00,  exposure: 0.90, gamma: 1.35, horizonFade: [22, 58], creakGain: 0.8, skyLum: 0.07,
+               stars: 1, moon: 1, moonDir: [0.70, 0.52, 0.30], meteors: 1 },
+  lakenight: { name: "Lake, night",  src: "scenes/lakenight.jpg", night: 1, captureHeight: 1.60, yaw: -0.12, exposure: 0.95, gamma: 1.15, horizonFade: [10, 30], creakGain: 0.8, skyLum: 0.09,
+               stars: 1, moon: 1, moonDir: [0.80, 0.36, 0.18], water: 1, waterFrom: 1.6, meteors: 1 }
+};
+const SCENE_ORDER = ["meadow", "orchard", "lakedawn", "autumn", "night", "stars", "lakenight"];
+for (const k in SCENES) { const s = SCENES[k]; if (!s.moonDir) s.moonDir = [0.60, 0.62, 0.30]; const m = Math.hypot(...s.moonDir); s.moonDir = s.moonDir.map(v => v / m); }
+
+/* ============================================================
+   2. The swing. One pendulum, metres and radians.
+      Angle th is measured from straight down; forward is positive.
+   ============================================================ */
+const G = 9.81;
+const swing = {
+  length: 3.2,         // pivot to seat, metres (a tall playground swing)
+  lengthTarget: 3.2,   // the [ ] keys move this; the real length eases toward it
+  seatClear: 0.45,     // seat above the ground at rest
+  eyeUp: 0.80,         // eyes above the seat
+  th: -0.35, w: 0,     // start held back a little, then let go
+  level: 6,            // 1..10, Grant's speed control
+  time: 0,
+  paused: false,
+  lastSign: 1,
+  peakAbs: 0,          // last measured peak angle, for the sound and the lean
+  tension: 1
+};
+function pivotHeight() { return swing.length + swing.seatClear; }
+function eyeRadius()   { return swing.length - swing.eyeUp; }
+function targetAmplitude() {
+  const t = (swing.level - 1) / 9;               // 0..1
+  const deg = 12 + 78 * Math.pow(t, 1.05);        // 12° .. 90°
+  return deg * Math.PI / 180;
+}
+function energy(th, w) { return 0.5 * w * w - (G / swing.length) * Math.cos(th); }
+
+function stepSwing(dt) {
+  // a changed length eases in over a second or two, so the eye never jumps
+  swing.length += (swing.lengthTarget - swing.length) * Math.min(1, dt * 1.2);
+  const L = swing.length;
+  const A = targetAmplitude();
+  const Et = -(G / L) * Math.cos(A);
+  const sub = 4; const h = dt / sub;
+  for (let i = 0; i < sub; i++) {
+    const th = swing.th, w = swing.w;
+    // gravity + light damping (air and bearings)
+    let alpha = -(G / L) * Math.sin(th) - 0.045 * w;
+    // The rider pumps. Energy goes in near the bottom, where the legs do the work,
+    // and comes out gently (feet dragging, no pumping) when there is too much.
+    const E = energy(th, w);
+    const near = Math.exp(-(th * th) / (2 * 0.45 * 0.45));   // 1 at the bottom, fades by ~45°
+    if (E < Et) {
+      const want = Math.min(1, (Et - E) / 1.6);
+      alpha += Math.sign(w || swing.lastSign) * near * (0.16 + 0.34 * want) * Math.min(1, Math.abs(w) / 0.6);
+    } else {
+      const over = Math.min(1, (E - Et) / 1.2);
+      alpha -= w * (0.07 + 0.22 * over);
+    }
+    swing.w = w + alpha * h;
+    swing.th = th + swing.w * h;
+    if (Math.abs(swing.w) > 0.02) swing.lastSign = Math.sign(swing.w);
+    // peak detection: the moment the velocity changes sign
+    if ((w > 0 && swing.w <= 0) || (w < 0 && swing.w >= 0)) {
+      swing.peakAbs = Math.abs(swing.th);
+      onPeak(swing.th);
+    }
+  }
+  swing.time += dt;
+  // chain tension as a multiple of body weight (feel of the "float" at the top)
+  swing.tension = Math.cos(swing.th) + (L * swing.w * swing.w) / G;
+}
+
+/* ============================================================
+   3. The rider's eyes. Where they are and where they look.
+   ============================================================ */
+const view = {
+  hfovDeg: 104,     // horizontal field of view on a landscape screen; W key cycles
+  pitch: 0, pitchVel: 0,
+  yawWobble: 0, rollWobble: 0, slack: 0,
+  eye: [0, 1.2, 0],  // x forward, y up, z right
+  eyeVel: [0, 0, 0]
+};
+function smoothNoise(t, seed) {
+  return 0.55 * Math.sin(t * 0.73 + seed) + 0.3 * Math.sin(t * 1.91 + seed * 2.3) + 0.15 * Math.sin(t * 3.37 + seed * 0.7);
+}
+function updateView(dt) {
+  const L = swing.length, Le = eyeRadius(), H = pivotHeight();
+  const th = swing.th, w = swing.w;
+  // eyes hang on the chain line, a little ahead of it (the head sits forward of the chains)
+  const ahead = 0.12;
+  const ex = Le * Math.sin(th) + ahead * Math.cos(th);
+  const ey = H - Le * Math.cos(th) + ahead * Math.sin(th);
+  // Near the top of a very high swing the chains go light; the seat sinks a few centimetres
+  // and is caught again as the swing falls back: the little lurch every high swinger knows.
+  const slackWant = Math.max(0, Math.min(1, (0.22 - swing.tension) / 0.22)) * 0.07;
+  view.slack += (slackWant - view.slack) * Math.min(1, dt * (slackWant > view.slack ? 6 : 18));
+  const prev = view.eye;
+  view.eye = [ex, ey - view.slack, 0];
+  if (dt > 0) view.eyeVel = [(view.eye[0] - prev[0]) / dt, (view.eye[1] - prev[1]) / dt, 0];
+
+  // Body pitch: the torso follows the chains. Going forward through the bottom the rider
+  // leans back (pumping), going back they sit up and look down at where they are going.
+  const amp = Math.max(0.15, Math.min(1, swing.peakAbs / 1.2));
+  const vmax = Math.sqrt(2 * G * L * (1 - Math.cos(targetAmplitude()))) / L + 0.3;
+  const lean = (w / vmax) * (0.16 * amp);                       // + = look up more
+  const baseDown = -0.12;                                       // a natural slightly-down gaze
+  // The neck keeps the head a little more level than the torso: the torso goes with the chains,
+  // the eyes keep the far edge of the ground in the top of the view when looking down.
+  let targetPitch = 0.80 * th + lean + baseDown;
+  const downLimit = -0.62;                                      // about 36° below level
+  if (targetPitch < downLimit) targetPitch = downLimit - 0.14 * Math.tanh((downLimit - targetPitch) / 0.14);
+  // The head is not bolted on: a soft spring follows the body with a little lag.
+  const k = 120, c = 2 * Math.sqrt(k) * 0.9;
+  view.pitchVel += (k * (targetPitch - view.pitch) - c * view.pitchVel) * dt;
+  view.pitch += view.pitchVel * dt;
+
+  // The chains twist a little; the faster you go, the more the seat wanders.
+  const sp = Math.min(1, Math.abs(w * Le) / 6);
+  const t = swing.time;
+  view.yawWobble  = (0.010 + 0.022 * sp) * smoothNoise(t, 1.7);
+  view.rollWobble = (0.008 + 0.018 * sp) * smoothNoise(t, 4.1) + 0.015 * amp * Math.sin(th * 1.3 + 0.4);
+  if (view.slack > 0.01 && slackWant < view.slack) view.pitchVel -= view.slack * 2.5;
+}
+function cameraBasis() {
+  // forward along +x, up +y, right +z; apply yaw (about y), pitch (about z), roll (about x)
+  const yaw = view.yawWobble, pitch = view.pitch, roll = view.rollWobble;
+  const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch), cr = Math.cos(roll), sr = Math.sin(roll);
+  // start: f=(1,0,0) u=(0,1,0) r=(0,0,1)
+  // pitch up: f -> (cp, sp, 0), u -> (-sp, cp, 0)
+  let f = [cp, sp, 0], u = [-sp, cp, 0], r = [0, 0, 1];
+  // roll about f: u,r rotate
+  const u2 = [u[0] * cr + r[0] * sr, u[1] * cr + r[1] * sr, u[2] * cr + r[2] * sr];
+  const r2 = [r[0] * cr - u[0] * sr, r[1] * cr - u[1] * sr, r[2] * cr - u[2] * sr];
+  u = u2; r = r2;
+  // yaw about world y
+  const ry = v => [v[0] * cy - v[2] * sy, v[1], v[0] * sy + v[2] * cy];
+  return { f: ry(f), u: ry(u), r: ry(r) };
+}
+// the camera's field of view for this frame: the set horizontal span, opening a touch with speed (the rush)
+function fovNow() {
+  const aspect = canvas.width / canvas.height;
+  const sp = Math.min(1, Math.abs(swing.w * eyeRadius()) / 7.5);
+  const h = view.hfovDeg + (state.blur ? 5 * sp * sp : 0);
+  let fov = 2 * Math.atan(Math.tan(h * Math.PI / 360) / aspect);
+  if (aspect < 1) fov = 80 * Math.PI / 180;
+  return { fov, aspect, tanHalf: Math.tan(fov / 2) };
+}
+
+/* ============================================================
+   4. Drawing. One full-screen shader casts a ray per pixel into
+      the photograph: the sky and far trees are at infinity, the
+      ground is a true plane under your feet, so it slides and
+      swells as you move, like real ground does. On top of the
+      photograph the shader adds the page's own stars, a moon,
+      the moon's path on water, and the dusk grade.
+   ============================================================ */
+const canvas = document.getElementById("view");
+const over = document.getElementById("over"), octx = over.getContext("2d");
+const gl = canvas.getContext("webgl2", { antialias: false, alpha: false, powerPreference: "high-performance" })
+        || canvas.getContext("webgl", { antialias: false, alpha: false, powerPreference: "high-performance" });
+const isGL2 = !!(gl && gl.texStorage2D);
+if (!gl) { document.querySelector("#start p").textContent = "This browser could not start WebGL, which the swing needs."; }
+
+const VS = `
+attribute vec2 aPos; varying vec2 vUv;
+void main(){ vUv = aPos; gl_Position = vec4(aPos, 0.0, 1.0); }`;
+const FS = `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D uTex;
+uniform vec3 uEye;          // metres; x forward, y up, z right
+uniform vec3 uF, uU, uR;    // camera basis
+uniform float uTanHalf, uAspect;
+uniform float uCapH;        // height of the camera that took the picture
+uniform vec2 uFade;         // ground plane -> infinity blend, metres
+uniform float uYaw;         // scene yaw offset in turns
+uniform float uExposure;
+uniform float uGamma;       // >1 deepens the darks: the very dark places
+uniform float uNight;
+uniform float uSpeed;       // 0..1, for the rush vignette
+uniform float uBlur;        // vertical blur in uv units, from the pitch rate
+uniform float uFade0;       // start-up fade, 0..1
+uniform float uDusk;        // 0..1 day-for-night grade
+uniform float uStars;       // 0..1 the page's own stars
+uniform float uMoon;        // 0..1 the page's own moon
+uniform vec3 uMoonDir;      // unit direction to the moon
+uniform float uTime;
+uniform float uSkyLum;      // photo luminance above which a pixel above the horizon is open sky
+uniform float uWater;       // 1 if the ground beyond uWaterFrom is water
+uniform float uWaterFrom;
+const float PI = 3.14159265;
+
+vec2 dirToUv(vec3 d){
+  float lon = atan(d.z, d.x);
+  float lat = asin(clamp(d.y, -1.0, 1.0));
+  return vec2(0.5 + lon / (2.0 * PI) + uYaw, 0.5 - lat / PI);
+}
+vec3 fetch(vec3 d){
+  vec2 uv = dirToUv(d);
+  return texture2D(uTex, uv).rgb;
+}
+vec3 look(vec3 d){
+  if (d.y < -0.0005) {
+    float t = -uEye.y / d.y;
+    vec3 hit = uEye + d * t;
+    float r = length(hit.xz);
+    vec3 fromCam = normalize(hit - vec3(0.0, uCapH, 0.0));
+    vec3 g = fetch(fromCam);
+    float wFar = smoothstep(uFade.x, uFade.y, r);
+    if (wFar <= 0.0) return g;
+    return mix(g, fetch(d), wFar);
+  }
+  return fetch(d);
+}
+float hash31(vec3 p){ p = fract(p * 0.1031); p += dot(p, p.yzx + 33.33); return fract((p.x + p.y) * p.z); }
+float vnoise(vec3 p){
+  vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(hash31(i), hash31(i + vec3(1,0,0)), f.x), mix(hash31(i + vec3(0,1,0)), hash31(i + vec3(1,1,0)), f.x), f.y),
+             mix(mix(hash31(i + vec3(0,0,1)), hash31(i + vec3(1,0,1)), f.x), mix(hash31(i + vec3(0,1,1)), hash31(i + vec3(1,1,1)), f.x), f.y), f.z);
+}
+// Stars: one candidate star per cell of a fine grid over directions; most faint, a few bright, all twinkling.
+vec3 starField(vec3 d){
+  vec3 p = d * 230.0; vec3 cell = floor(p); vec3 f = fract(p) - 0.5;
+  float h = hash31(cell);
+  if (h < 0.78) return vec3(0.0);
+  vec3 off = (vec3(hash31(cell + 11.0), hash31(cell + 23.0), hash31(cell + 37.0)) - 0.5) * 0.5;
+  float dist = length(f - off);
+  float mag = pow(hash31(cell + 53.0), 3.0);                 // 0 faint .. 1 bright
+  float size = 0.09 + 0.13 * mag;
+  float b = (1.0 - smoothstep(size * 0.2, size, dist)) * (0.22 + 1.8 * mag);
+  float tw = 0.78 + 0.22 * sin(uTime * (2.0 + 4.0 * hash31(cell + 71.0)) + h * 60.0);
+  vec3 tint = mix(vec3(0.75, 0.85, 1.0), vec3(1.0, 0.92, 0.78), hash31(cell + 91.0));
+  return tint * b * tw;
+}
+// The moon: a full disc with limb darkening and soft maria, a halo around it.
+vec3 moonDisc(vec3 d, out float disc){
+  float cosA = dot(d, uMoonDir);
+  float ang = acos(clamp(cosA, -1.0, 1.0));
+  float R = 0.0175;                                         // one degree of radius: twice life size, so it reads
+  disc = 1.0 - smoothstep(R * 0.93, R, ang);
+  vec3 col = vec3(0.0);
+  if (disc > 0.0) {
+    float rr = clamp(ang / R, 0.0, 1.0);
+    float limb = 1.0 - 0.30 * rr * rr;
+    float m = vnoise(d * 95.0) * 0.6 + vnoise(d * 190.0) * 0.4;
+    float maria = 0.78 + 0.22 * smoothstep(0.35, 0.65, m);
+    col = vec3(1.0, 0.97, 0.90) * 1.25 * limb * maria;
+  }
+  float glow = exp(-ang * 30.0) * 0.30 + exp(-ang * 7.0) * 0.05;
+  return col * disc + vec3(0.88, 0.92, 1.0) * glow;
+}
+void main(){
+  vec3 d = normalize(uF + uR * (vUv.x * uTanHalf * uAspect) + uU * (vUv.y * uTanHalf));
+  vec3 c0 = look(d);                                        // the sharp centre sample: the sky mask comes from this
+  vec3 c;
+  if (uBlur > 0.00005) {
+    // a touch of motion smear along the direction the view is sweeping
+    vec3 acc = c0;
+    for (int i = -2; i <= 2; i++) {
+      if (i == 0) continue;
+      float o = float(i) * uBlur;
+      vec3 dd = normalize(uF + uR * (vUv.x * uTanHalf * uAspect) + uU * ((vUv.y + o) * uTanHalf));
+      acc += look(dd);
+    }
+    c = acc / 5.0;
+  } else {
+    c = c0;
+  }
+  float lumRaw = dot(c0, vec3(0.299, 0.587, 0.114));
+  float above = step(0.0, d.y);
+  // open sky: above the horizon and brighter than the trees in this photograph
+  float sky = above * smoothstep(uSkyLum * 0.75, uSkyLum * 1.25, lumRaw);
+  c *= uExposure;
+  if (uGamma != 1.0) c = pow(max(c, vec3(0.0)), vec3(uGamma));
+  if (uNight > 0.5) {
+    // let the moonlight read: lift the shadows a little, cool the tone
+    c = pow(c, vec3(0.92));
+    c = mix(c, c * vec3(0.92, 0.97, 1.08), 0.5);
+  }
+  if (uDusk > 0.001) {
+    // day for night: dim, cool, half the colour; the bright day sky becomes a deep blue night sky
+    float lum = dot(c, vec3(0.299, 0.587, 0.114));
+    vec3 n = pow(mix(vec3(lum), c, 0.38) * vec3(0.50, 0.62, 0.95), vec3(0.78)) * 0.40;
+    vec3 nightSky = vec3(0.030, 0.045, 0.095) + 0.06 * max(0.0, lum - 0.5) * vec3(0.5, 0.6, 1.0);
+    n = mix(n, nightSky, sky);
+    c = mix(c, n, uDusk);
+  }
+  float nightness = max(uNight, uDusk);
+  if (nightness > 0.001) {
+    float moonUp = smoothstep(-0.05, 0.08, uMoonDir.y);
+    // moonlight: when the moon is up, the whole scene gets a little cool light
+    c *= mix(1.0, 1.0 + 0.16 * uMoon * moonUp, nightness);
+    float strength = max(uStars, uDusk) * nightness;
+    if (strength > 0.001 && sky > 0.001) {
+      float elev = smoothstep(0.01, 0.10, d.y);               // none right at the horizon, where haze lives
+      c += starField(d) * sky * elev * strength;
+    }
+    if (uMoon > 0.001) {
+      float disc;
+      vec3 m = moonDisc(d, disc);
+      // the disc only where the photograph shows open sky (behind a tree it is hidden); the halo may spill a little
+      c += m * mix(sky, max(sky, 0.35), 1.0 - disc) * uMoon * nightness;
+      // the moon's path on the water: the mirrored ray against the moon, broken by small waves
+      if (uWater > 0.5 && d.y < -0.0005) {
+        float t = -uEye.y / d.y; vec3 hit = uEye + d * t; float r = length(hit.xz);
+        if (r > uWaterFrom) {
+          vec3 rd = vec3(d.x, -d.y, d.z);
+          vec2 a = normalize(rd.xz), b = normalize(uMoonDir.xz);
+          float dh = length(a - b);
+          float dv = rd.y - uMoonDir.y;
+          float ripple = 0.55 + 0.45 * vnoise(vec3(hit.x * 2.2, hit.z * 5.0, uTime * 0.9));
+          float path = exp(-dh * dh * 80.0) * (1.0 - smoothstep(0.0, 0.60, abs(dv))) * ripple;
+          path *= smoothstep(uWaterFrom, uWaterFrom + 1.2, r);
+          c += vec3(0.95, 0.95, 0.9) * path * 0.55 * uMoon * nightness;
+        }
+      }
+    }
+  }
+  // soft vignette, deepening a little with speed: the eyes narrow when the air rushes
+  float rr = dot(vUv * vec2(uAspect, 1.0), vUv * vec2(uAspect, 1.0)) / (uAspect * uAspect + 1.0);
+  float vig = 1.0 - (0.22 + 0.25 * uSpeed) * smoothstep(0.25, 1.15, rr);
+  c *= vig;
+  c *= uFade0;
+  gl_FragColor = vec4(c, 1.0);
+}`;
+let prog, uni = {}, tex = {}, texReady = {};
+function compile(type, src) {
+  const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+  return s;
+}
+function initGL() {
+  prog = gl.createProgram();
+  gl.attachShader(prog, compile(gl.VERTEX_SHADER, VS));
+  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FS));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  gl.useProgram(prog);
+  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(prog, "aPos"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  for (const n of ["uTex", "uEye", "uF", "uU", "uR", "uTanHalf", "uAspect", "uCapH", "uFade", "uYaw", "uExposure", "uGamma", "uNight", "uSpeed", "uBlur", "uFade0",
+                   "uDusk", "uStars", "uMoon", "uMoonDir", "uTime", "uSkyLum", "uWater", "uWaterFrom"]) uni[n] = gl.getUniformLocation(prog, n);
+}
+function makeTexture(img) {
+  const t = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.generateMipmap(gl.TEXTURE_2D);
+  const ext = gl.getExtension("EXT_texture_filter_anisotropic") || gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic");
+  if (ext) gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(16, gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+  return t;
+}
+function loadScene(key) {
+  if (texReady[key]) return texReady[key];
+  texReady[key] = new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      // the rider has moved on and this picture is neither shown nor wanted: let it go rather than fill the card
+      if (state.wantScene !== key && state.scene !== key && !recent.includes(key)) { delete texReady[key]; resolve(null); return; }
+      try { tex[key] = makeTexture(img); resolve(tex[key]); } catch (e) { reject(e); }
+    };
+    img.onerror = () => reject(new Error("picture failed: " + key));
+    img.src = SCENES[key].src;
+  });
+  texReady[key].catch(() => { delete texReady[key]; });
+  return texReady[key];
+}
+// Seven 8k pictures would fill a small graphics card. Keep the one on show and the two used before it; let the rest go.
+const recent = [];
+function trimTextures(keep) {
+  const ix = recent.indexOf(keep); if (ix >= 0) recent.splice(ix, 1); recent.unshift(keep);
+  while (recent.length > 3) recent.pop();
+  for (const k in tex) { if (!recent.includes(k) && tex[k]) { gl.deleteTexture(tex[k]); delete tex[k]; delete texReady[k]; } }
+}
+let fadeIn = 0;
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.round(canvas.clientWidth * dpr), h = Math.round(canvas.clientHeight * dpr);
+  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; gl.viewport(0, 0, w, h); }
+  if (over.width !== w || over.height !== h) { over.width = w; over.height = h; }
+}
+let clock = 0;
+function draw(dt) {
+  resize();
+  const sc = SCENES[state.scene];
+  if (!tex[state.scene]) return;
+  const b = cameraBasis();
+  const { aspect, tanHalf } = fovNow();
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex[state.scene]); gl.uniform1i(uni.uTex, 0);
+  gl.uniform3fv(uni.uEye, view.eye);
+  gl.uniform3fv(uni.uF, b.f); gl.uniform3fv(uni.uU, b.u); gl.uniform3fv(uni.uR, b.r);
+  gl.uniform1f(uni.uTanHalf, tanHalf); gl.uniform1f(uni.uAspect, aspect);
+  gl.uniform1f(uni.uCapH, sc.captureHeight);
+  gl.uniform2f(uni.uFade, sc.horizonFade[0], sc.horizonFade[1]);
+  gl.uniform1f(uni.uYaw, sc.yaw);
+  gl.uniform1f(uni.uExposure, sc.exposure);
+  gl.uniform1f(uni.uGamma, sc.gamma || 1.0);
+  gl.uniform1f(uni.uNight, sc.night);
+  gl.uniform1f(uni.uDusk, state.duskT);
+  gl.uniform1f(uni.uStars, sc.stars ? 1 : 0);
+  gl.uniform1f(uni.uMoon, state.moonT);
+  gl.uniform3fv(uni.uMoonDir, sc.moonDir);
+  gl.uniform1f(uni.uTime, clock);
+  gl.uniform1f(uni.uSkyLum, sc.skyLum);
+  gl.uniform1f(uni.uWater, sc.water ? 1 : 0);
+  gl.uniform1f(uni.uWaterFrom, sc.waterFrom || 0);
+  const sp = Math.min(1, Math.abs(swing.w * eyeRadius()) / 7.5);
+  gl.uniform1f(uni.uSpeed, state.blur ? sp * sp : 0);
+  const blur = Math.min(0.004, Math.abs(view.pitchVel) * dt * 0.30);
+  gl.uniform1f(uni.uBlur, state.blur ? blur : 0);
+  fadeIn = Math.min(1, fadeIn + dt / 1.6);
+  gl.uniform1f(uni.uFade0, fadeIn * (state.sceneFade));
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+/* ============================================================
+   4b. Things in the air, drawn over the photograph on a second
+       canvas: falling leaves that live in the world around the
+       swing (the rider's passage pushes them), and now and then a
+       shooting star. Both are projected through the same camera.
+   ============================================================ */
+const LEAF_COLORS = [[176, 74, 32], [196, 120, 36], [140, 42, 30], [122, 86, 40], [205, 150, 60], [96, 60, 36], [214, 96, 40]];
+const leaves = { list: [], on: true, meteors: [], nextMeteor: 8 };
+function spawnLeaf(l, fromTop) {
+  l.x = -6 + Math.random() * 14; l.z = -7 + Math.random() * 14;
+  l.y = fromTop ? 6 + Math.random() * 3.5 : Math.random() * 9.5;
+  l.vy = -(0.35 + Math.random() * 0.45); l.vx = 0; l.vz = 0;
+  l.ph = Math.random() * 6.283; l.sw = 0.7 + Math.random() * 1.1;
+  l.size = 0.045 + Math.random() * 0.05; l.rot = Math.random() * 6.283; l.rs = (Math.random() - 0.5) * 3.5;
+  l.col = LEAF_COLORS[(Math.random() * LEAF_COLORS.length) | 0]; l.aspect = 0.45 + Math.random() * 0.3;
+}
+for (let i = 0; i < 170; i++) { const l = {}; spawnLeaf(l, false); leaves.list.push(l); }
+function project(p, cam) {
+  // p relative to the eye -> screen pixels, or null when behind the camera
+  const xf = p[0] * cam.f[0] + p[1] * cam.f[1] + p[2] * cam.f[2];
+  if (xf < 0.12) return null;
+  const xu = p[0] * cam.u[0] + p[1] * cam.u[1] + p[2] * cam.u[2];
+  const xr = p[0] * cam.r[0] + p[1] * cam.r[1] + p[2] * cam.r[2];
+  const W = over.width, H = over.height;
+  return { x: W / 2 + (xr / xf) / (cam.tanHalf * cam.aspect) * W / 2, y: H / 2 - (xu / xf) / cam.tanHalf * H / 2, depth: xf, scale: (H / 2) / cam.tanHalf / xf };
+}
+function updateLeaves(dt) {
+  const t = clock, e = view.eye, ev = view.eyeVel;
+  const wind = 0.22 + 0.18 * smoothNoise(t * 0.4, 2.2);
+  for (const l of leaves.list) {
+    // flutter: a leaf slips sideways as it falls and its fall speed breathes
+    const flutter = Math.sin(t * l.sw * 2.1 + l.ph);
+    l.x += (wind + l.vx + 0.30 * flutter) * dt;
+    l.z += (l.vz + 0.22 * Math.cos(t * l.sw * 1.7 + l.ph)) * dt;
+    l.y += (l.vy * (0.75 + 0.25 * Math.abs(flutter))) * dt;
+    l.rot += l.rs * dt;
+    // the rider rushes past: air pushed ahead of the body moves nearby leaves
+    const dx = l.x - e[0], dy = l.y - e[1], dz = l.z - e[2];
+    const dist = Math.hypot(dx, dy, dz);
+    if (dist < 1.8) { const k = (1.8 - dist) / 1.8 * 0.9 * dt; l.vx += ev[0] * k; l.vz += (dz > 0 ? 1 : -1) * Math.abs(ev[0]) * 0.35 * k; l.vy = Math.min(0.4, l.vy + ev[1] * k * 0.5); }
+    l.vx *= Math.exp(-dt * 1.8); l.vz *= Math.exp(-dt * 1.8); l.vy += (-(0.55) - l.vy) * Math.min(1, dt * 0.8);
+    if (l.y < 0.03 || l.x > 11 || l.x < -8 || Math.abs(l.z) > 9) spawnLeaf(l, true);
+  }
+}
+function drawLeaves(cam, dusk) {
+  const dim = 1 - 0.68 * dusk;
+  const list = leaves.list.map(l => ({ l, p: project([l.x - view.eye[0], l.y - view.eye[1], l.z - view.eye[2]], cam) })).filter(o => o.p && o.p.depth > 0.25);
+  list.sort((a, b) => b.p.depth - a.p.depth);
+  for (const { l, p } of list) {
+    const s = Math.min(90, l.size * p.scale); if (s < 0.6) continue;
+    const c = l.col;
+    const shade = 0.75 + 0.25 * Math.sin(l.rot * 2 + 1);
+    octx.save(); octx.translate(p.x, p.y); octx.rotate(l.rot);
+    octx.globalAlpha = Math.min(1, 0.6 + p.depth * 0.1) * (p.depth < 0.6 ? (p.depth - 0.25) / 0.35 : 1);
+    octx.fillStyle = `rgb(${(c[0] * dim * shade) | 0},${(c[1] * dim * shade * (1 + 0.1 * dusk)) | 0},${(c[2] * dim * shade * (1 + 0.6 * dusk)) | 0})`;
+    octx.beginPath(); octx.ellipse(0, 0, s, s * l.aspect, 0, 0, 6.283); octx.fill();
+    octx.restore();
+  }
+}
+function updateMeteors(dt, allowNew) {
+  leaves.nextMeteor -= dt;
+  if (allowNew && leaves.nextMeteor <= 0 && leaves.meteors.length < 2) {
+    leaves.nextMeteor = 14 + Math.random() * 30;
+    // a direction in the sky, forward-ish and high, and a short path across it
+    const az = (Math.random() - 0.5) * 2.2, alt = 0.45 + Math.random() * 0.75;
+    const d0 = [Math.cos(alt) * Math.cos(az), Math.sin(alt), Math.cos(alt) * Math.sin(az)];
+    const ta = Math.random() * 6.283, step = 0.045 + Math.random() * 0.05;
+    const dir = [-Math.sin(alt) * Math.cos(az) * Math.cos(ta) - Math.sin(az) * Math.sin(ta), Math.cos(alt) * Math.cos(ta), -Math.sin(alt) * Math.sin(az) * Math.cos(ta) + Math.cos(az) * Math.sin(ta)];
+    leaves.meteors.push({ d0, dir, step, age: 0, life: 0.55 + Math.random() * 0.4 });
+  }
+  for (const m of leaves.meteors) m.age += dt;
+  leaves.meteors = leaves.meteors.filter(m => m.age < m.life + 0.25);
+}
+function drawMeteors(cam) {
+  for (const m of leaves.meteors) {
+    const u = Math.min(1, m.age / m.life);
+    const pts = [];
+    for (let k = 0; k <= 6; k++) {
+      const s = Math.max(0, u - (6 - k) * 0.035);
+      const d = [m.d0[0] + m.dir[0] * m.step * s, m.d0[1] + m.dir[1] * m.step * s, m.d0[2] + m.dir[2] * m.step * s];
+      const p = project(d, cam); if (!p) { pts.length = 0; break; } pts.push(p);
+    }
+    if (pts.length < 2) continue;
+    const fade = m.age > m.life ? 1 - (m.age - m.life) / 0.25 : 1;
+    const g = octx.createLinearGradient(pts[0].x, pts[0].y, pts[pts.length - 1].x, pts[pts.length - 1].y);
+    g.addColorStop(0, "rgba(255,255,255,0)"); g.addColorStop(1, `rgba(255,250,235,${0.9 * fade})`);
+    octx.strokeStyle = g; octx.lineWidth = Math.max(1.2, over.height / 700); octx.lineCap = "round";
+    octx.beginPath(); octx.moveTo(pts[0].x, pts[0].y); for (const p of pts) octx.lineTo(p.x, p.y); octx.stroke();
+  }
+}
+function drawOverlay(dt) {
+  const sc = SCENES[state.scene];
+  const wantLeaves = leaves.on && sc.leaves, wantMeteors = sc.meteors && state.moonT < 1.5;
+  if (!wantLeaves && !wantMeteors && !leaves.meteors.length) { if (over.width) octx.clearRect(0, 0, over.width, over.height); return; }
+  const b = cameraBasis(); const { aspect, tanHalf } = fovNow();
+  const cam = { f: b.f, u: b.u, r: b.r, aspect, tanHalf };
+  octx.clearRect(0, 0, over.width, over.height);
+  octx.globalAlpha = fadeIn * state.sceneFade;
+  if (wantLeaves) { if (!swing.paused) updateLeaves(dt); drawLeaves(cam, state.duskT); }
+  if (!swing.paused) updateMeteors(dt, wantMeteors);
+  if (wantMeteors && leaves.meteors.length) drawMeteors(cam);
+  octx.globalAlpha = 1;
+}
+
+/* ============================================================
+   5. Sound. Air moving past the ears, synthesised: nothing is
+      downloaded. Loudness and pitch follow the true speed.
+      A soft chain creak at each turn; water lapping by the lake;
+      an owl, now and then, in the autumn wood.
+   ============================================================ */
+const audio = { ctx: null, on: false, creak: true, owl: true, nodes: null, nextOwl: 12 };
+function makeNoise(ctx, seconds) {
+  const n = Math.floor(ctx.sampleRate * seconds), buf = ctx.createBuffer(2, n, ctx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) { const d = buf.getChannelData(ch); let a = 0, b = 0; for (let i = 0; i < n; i++) { const w = Math.random() * 2 - 1; a = 0.996 * a + 0.004 * w; b = 0.9 * b + 0.1 * w; d[i] = (w * 0.5 + b * 0.8 + a * 6) * 0.35; } }
+  return buf;
+}
+function startAudio() {
+  if (audio.ctx) { audio.ctx.resume(); return; }
+  const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
+  const ctx = audio.ctx = new C();
+  const master = ctx.createGain(); master.gain.value = 0; master.connect(ctx.destination);
+  const noise = ctx.createBufferSource(); noise.buffer = makeNoise(ctx, 4); noise.loop = true;
+  // body of the wind
+  const whoosh = ctx.createBiquadFilter(); whoosh.type = "bandpass"; whoosh.frequency.value = 400; whoosh.Q.value = 0.8;
+  const whooshGain = ctx.createGain(); whooshGain.gain.value = 0;
+  // hiss at the ears
+  const hiss = ctx.createBiquadFilter(); hiss.type = "highpass"; hiss.frequency.value = 1800;
+  const hissGain = ctx.createGain(); hissGain.gain.value = 0;
+  // a breath of breeze that is always there
+  const bed = ctx.createBiquadFilter(); bed.type = "lowpass"; bed.frequency.value = 500;
+  const bedGain = ctx.createGain(); bedGain.gain.value = 0.05;
+  // water at the shore: low, slow, uneven
+  const lap = ctx.createBiquadFilter(); lap.type = "lowpass"; lap.frequency.value = 260; lap.Q.value = 0.6;
+  const lapGain = ctx.createGain(); lapGain.gain.value = 0;
+  noise.connect(whoosh).connect(whooshGain).connect(master);
+  noise.connect(hiss).connect(hissGain).connect(master);
+  noise.connect(bed).connect(bedGain).connect(master);
+  noise.connect(lap).connect(lapGain).connect(master);
+  noise.start();
+  audio.nodes = { master, whoosh, whooshGain, hiss, hissGain, bedGain, bed, lapGain, noiseBuf: noise.buffer };
+  master.gain.setTargetAtTime(0.9, ctx.currentTime, 0.8);
+}
+function isNight() { return SCENES[state.scene].night || state.duskT > 0.5; }
+function updateAudio(dt) {
+  if (!audio.ctx || !audio.on || !audio.nodes) return;
+  const n = audio.nodes, t = audio.ctx.currentTime, sc = SCENES[state.scene];
+  const v = Math.abs(swing.w * eyeRadius());              // metres per second at the head
+  const s = Math.min(1, v / 7.5);
+  const loud = swing.paused ? 0 : s * s;
+  const dry = sc.leaves ? 1.35 : 1;                        // dry leaves make the air rustle
+  n.whooshGain.gain.setTargetAtTime(0.75 * loud, t, 0.06);
+  n.hissGain.gain.setTargetAtTime(0.28 * loud * s * dry, t, 0.06);
+  n.whoosh.frequency.setTargetAtTime(260 + 900 * s, t, 0.08);
+  // night air is a little softer and lower
+  const night = isNight();
+  n.bedGain.gain.setTargetAtTime(night ? 0.035 : 0.05, t, 1.0);
+  n.bed.frequency.setTargetAtTime(night ? 380 : 500, t, 1.0);
+  // the lake: slow waves at the shore
+  const lapWant = sc.water ? 0.045 + 0.04 * Math.max(0, smoothNoise(clock * 0.55, 9.3)) + 0.015 * Math.max(0, Math.sin(clock * 1.7)) : 0;
+  n.lapGain.gain.setTargetAtTime(lapWant, t, 0.25);
+  // the owl
+  if (sc.owl && audio.owl && night && !swing.paused) { audio.nextOwl -= dt; if (audio.nextOwl <= 0) { audio.nextOwl = 22 + Math.random() * 38; owlCall(); } }
+}
+function owlCall() {
+  // a tawny owl, far off: a soft hoot, a pause, then a longer wavering one
+  const ctx = audio.ctx, t0 = ctx.currentTime + 0.05;
+  const out = ctx.createBiquadFilter(); out.type = "lowpass"; out.frequency.value = 900; out.connect(audio.nodes.master);
+  const hoot = (t, f, len, g) => {
+    const o = ctx.createOscillator(); o.type = "sine"; o.frequency.setValueAtTime(f, t); o.frequency.linearRampToValueAtTime(f * 0.94, t + len);
+    const vib = ctx.createOscillator(); vib.frequency.value = 5.5; const vg = ctx.createGain(); vg.gain.value = len > 0.4 ? 5 : 1.5; vib.connect(vg).connect(o.frequency);
+    const e = ctx.createGain(); e.gain.setValueAtTime(0.0001, t);
+    e.gain.exponentialRampToValueAtTime(g, t + 0.08); e.gain.setValueAtTime(g, t + len - 0.12); e.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(e).connect(out); o.start(t); vib.start(t); o.stop(t + len + 0.02); vib.stop(t + len + 0.02);
+  };
+  const base = 360 + Math.random() * 40, g = 0.05;
+  hoot(t0, base, 0.32, g);
+  hoot(t0 + 1.05, base * 0.97, 0.22, g * 0.8);
+  hoot(t0 + 1.45, base * 0.99, 0.9, g);
+}
+function onPeak(th) {
+  // a soft creak as the chains take the turn; louder when the swing is high
+  if (!audio.ctx || !audio.on || !audio.creak || swing.paused) return;
+  const a = Math.abs(th); if (a < 0.25) return;
+  const ctx = audio.ctx, t = ctx.currentTime;
+  const amt = Math.min(1, (a - 0.2) / 1.1) * SCENES[state.scene].creakGain;
+  const src = ctx.createBufferSource(); src.buffer = audio.nodes.noiseBuf; src.loop = true;
+  const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 14;
+  const f0 = 520 + Math.random() * 260;
+  f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f0 * 0.72, t + 0.22);
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.09 * amt + 0.0001, t + 0.05);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+  src.connect(f).connect(g).connect(audio.nodes.master);
+  src.start(t, Math.random() * 3); src.stop(t + 0.35);
+}
+
+/* ============================================================
+   6. The page: controls, keys, full screen, the loop.
+   ============================================================ */
+const state = { scene: "meadow", wantScene: "meadow", started: false, blur: true, sceneFade: 1, hudTimer: 0,
+                dusk: {}, moon: {}, duskT: 0, moonT: 0 };
+for (const k in SCENES) { state.dusk[k] = !!SCENES[k].dusk; state.moon[k] = !!(SCENES[k].moon && !SCENES[k].moonInPhoto); }
+const $ = s => document.querySelector(s), $$ = s => Array.from(document.querySelectorAll(s));
+const hud = $("#hud"), help = $("#help"), toastEl = $("#toast");
+let toastT = 0;
+function toast(msg) { toastEl.textContent = msg; toastEl.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove("show"), 1400); }
+let hiddenAt = null;                                    // where the mouse was when the bar hid
+function hideHud() {
+  if (document.activeElement && document.activeElement.closest("#hud")) document.activeElement.blur();
+  hud.classList.add("hidden"); canvas.classList.add("hidecursor"); state.hudTimer = 0;
+  help.classList.add("hidden"); $("#helpBtn").setAttribute("aria-pressed", "false");
+  hiddenAt = lastPointer ? { x: lastPointer.x, y: lastPointer.y } : null;
+}
+function showHud() { hud.classList.remove("hidden"); canvas.classList.remove("hidecursor"); state.hudTimer = 3.2; }
+let lastPointer = null;
+function onPointerMove(e) {
+  lastPointer = { x: e.clientX, y: e.clientY };
+  if (hud.classList.contains("hidden") && hiddenAt) {
+    // ignore the tiny drift a resting hand makes; a real movement brings the bar back
+    if (Math.hypot(e.clientX - hiddenAt.x, e.clientY - hiddenAt.y) < 12) return;
+  }
+  showHud();
+}
+function setLevel(n) {
+  swing.level = Math.max(1, Math.min(10, n));
+  $("#speedRead").textContent = swing.level + " of 10";
+  $$("#meter i").forEach((el, i) => el.classList.toggle("lit", i < swing.level));
+  showHud();
+}
+function markScene(key) { $$("[data-scene]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.scene === key))); }
+function markNight() {
+  $("#dusk").setAttribute("aria-pressed", String(!!state.dusk[state.scene]));
+  $("#moon").setAttribute("aria-pressed", String(!!state.moon[state.scene]));
+}
+async function setScene(key, fromStart) {
+  if (!SCENES[key]) return;
+  state.wantScene = key;
+  if (key === state.scene && !fromStart) { markScene(key); return; }
+  markScene(key);
+  if (!tex[key]) { toast("Loading " + SCENES[key].name + "…"); try { await loadScene(key); } catch (e) { toast("Could not load that picture"); markScene(state.scene); return; } }
+  if (state.wantScene !== key) return;          // a later choice won
+  if (!tex[key]) { toast("Could not load that picture"); markScene(state.scene); return; }
+  state.scene = key;
+  trimTextures(key);
+  leaves.meteors.length = 0;
+  // the dusk and moon settings belong to each place; jump to them so the new place appears as itself
+  state.duskT = state.dusk[key] ? 1 : 0; state.moonT = state.moon[key] ? 1 : 0;
+  markNight();
+  fadeIn = fromStart ? 0 : 0.35;
+  if (!fromStart) toast(SCENES[key].name);
+  showHud();
+}
+function setDusk(on) {
+  state.dusk[state.scene] = on; markNight();
+  toast(on ? "Dusk" : (SCENES[state.scene].night ? "Night as photographed" : "Daylight"));
+}
+function setMoon(on) {
+  const sc = SCENES[state.scene];
+  if (sc.moonInPhoto) { toast("This sky has its own moon"); markNight(); return; }
+  state.moon[state.scene] = on; markNight();
+  toast(on ? (isNight() ? "Moon" : "Moon: shows at dusk, press D") : "Moon off");
+}
+function setSound(on) {
+  audio.on = on;
+  if (on) startAudio(); else if (audio.ctx && audio.nodes) { const t = audio.ctx.currentTime; audio.nodes.whooshGain.gain.setTargetAtTime(0, t, 0.05); audio.nodes.hissGain.gain.setTargetAtTime(0, t, 0.05); }
+  if (audio.ctx && audio.nodes) audio.nodes.master.gain.setTargetAtTime(on ? 0.9 : 0, audio.ctx.currentTime, 0.3);
+  $("#sound").setAttribute("aria-pressed", String(on)); $("#sound").textContent = on ? "Sound on" : "Sound off";
+}
+function setPause(p) { swing.paused = p; $("#pause").setAttribute("aria-pressed", String(p)); $("#pause").textContent = p ? "Paused" : "Pause"; showHud(); }
+function toggleFull() {
+  const el = document.documentElement;
+  if (!document.fullscreenElement) (el.requestFullscreen || el.webkitRequestFullscreen).call(el).catch(() => {});
+  else (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+}
+const FOVS = [104, 118, 90];
+let fovIx = 0;
+
+// wire the controls
+for (let i = 0; i < 10; i++) { const d = document.createElement("i"); $("#meter").appendChild(d); }
+$$("[data-scene]").forEach(b => b.addEventListener("click", () => setScene(b.dataset.scene, !state.started)));
+$("#slower").addEventListener("click", () => setLevel(swing.level - 1));
+$("#faster").addEventListener("click", () => setLevel(swing.level + 1));
+$("#dusk").addEventListener("click", () => setDusk(!state.dusk[state.scene]));
+$("#moon").addEventListener("click", () => setMoon(!state.moon[state.scene]));
+$("#sound").addEventListener("click", () => setSound(!audio.on));
+$("#pause").addEventListener("click", () => setPause(!swing.paused));
+$("#full").addEventListener("click", toggleFull);
+$("#helpBtn").addEventListener("click", () => { help.classList.toggle("hidden"); $("#helpBtn").setAttribute("aria-pressed", String(!help.classList.contains("hidden"))); });
+$("#go").addEventListener("click", () => {
+  if (state.started) return;
+  state.started = true;
+  $("#start").classList.add("gone"); $("#start").inert = true; hud.inert = false;
+  $("#pause").focus({ preventScroll: true }); $("#pause").blur();
+  swing.th = -Math.min(0.6, targetAmplitude() * 0.55); swing.w = 0; swing.time = 0; fadeIn = 0;
+  if (audio.on) startAudio();
+  showHud();
+});
+window.addEventListener("keydown", e => {
+  if (e.target && e.target.tagName === "BUTTON" && (e.key === " " || e.key === "Enter")) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key;
+  if (k === " ") { e.preventDefault(); if (!state.started) { $("#go").click(); } else setPause(!swing.paused); }
+  else if (k === "f" || k === "F") toggleFull();
+  else if (k === "ArrowUp" || k === "+" || k === "=") { e.preventDefault(); setLevel(swing.level + 1); }
+  else if (k === "ArrowDown" || k === "-" || k === "_") { e.preventDefault(); setLevel(swing.level - 1); }
+  else if (k >= "1" && k <= "7") setScene(SCENE_ORDER[+k - 1], !state.started);
+  else if (k === "n" || k === "N") setScene(SCENE_ORDER[(SCENE_ORDER.indexOf(state.scene) + 1) % SCENE_ORDER.length], !state.started);
+  else if (k === "d" || k === "D") setDusk(!state.dusk[state.scene]);
+  else if (k === "m" || k === "M") setMoon(!state.moon[state.scene]);
+  else if (k === "l" || k === "L") { leaves.on = !leaves.on; toast(leaves.on ? "Falling leaves on" : "Falling leaves off"); }
+  else if (k === "o" || k === "O") { audio.owl = !audio.owl; toast(audio.owl ? "Owl on" : "Owl off"); }
+  else if (k === "s" || k === "S") setSound(!audio.on);
+  else if (k === "c" || k === "C") { audio.creak = !audio.creak; toast(audio.creak ? "Chain creak on" : "Chain creak off"); }
+  else if (k === "w" || k === "W") { fovIx = (fovIx + 1) % FOVS.length; view.hfovDeg = FOVS[fovIx]; toast(["Wide view", "Wider view", "Narrow view"][fovIx]); }
+  else if (k === "[") { swing.lengthTarget = Math.max(1.8, swing.lengthTarget - 0.2); toast("Swing " + swing.lengthTarget.toFixed(1) + " m"); }
+  else if (k === "]") { swing.lengthTarget = Math.min(4.6, swing.lengthTarget + 0.2); toast("Swing " + swing.lengthTarget.toFixed(1) + " m"); }
+  else if (k === "h" || k === "H") hideHud();
+  else if (k === "k" || k === "K") $("#helpBtn").click();
+  else if (k === "b" || k === "B") { state.blur = !state.blur; toast(state.blur ? "Motion smear and rush shading on" : "Clear view: smear and rush shading off"); }
+  else return;
+});
+hud.addEventListener("click", e => { const b = e.target.closest("button"); if (b && e.detail > 0) b.blur(); });
+hud.addEventListener("focusin", showHud);
+window.addEventListener("pointermove", onPointerMove);
+window.addEventListener("pointerdown", showHud);
+$("#hide").addEventListener("click", hideHud);
+document.addEventListener("fullscreenchange", () => { $("#full").textContent = document.fullscreenElement ? "Leave full screen" : "Full screen"; });
+
+// loading: the first picture, with a progress bar that moves while it decodes
+(function boot() {
+  try { initGL(); } catch (e) { $("#start p").textContent = "The drawing program failed to start: " + e.message; return; }
+  setLevel(6);
+  markNight();
+  const q = new URLSearchParams(location.search);
+  const first = (q.get("scene") && SCENES[q.get("scene")]) ? q.get("scene") : "meadow";
+  const bar = $("#bar > div"); let p = 0; const tick = setInterval(() => { p = Math.min(88, p + 4); bar.style.width = p + "%"; }, 120);
+  loadScene(first).then(() => {
+    clearInterval(tick); bar.style.width = "100%";
+    const go = $("#go"); go.disabled = false; go.textContent = "Start swinging"; go.focus();
+  }).catch(e => { clearInterval(tick); $("#start p").textContent = "The picture could not be loaded: " + e.message; });
+  // allow ?scene=stars&level=8&pose=back&dusk=1&moon=0 for stills
+  if (first !== "meadow") setScene(first, true);
+  if (q.get("level")) setLevel(+q.get("level"));
+  if (q.get("dusk") !== null) state.dusk[first] = q.get("dusk") === "1";
+  if (q.get("moon") !== null) state.moon[first] = q.get("moon") === "1";
+  if (q.get("bare")) { $("#start").style.display = "none"; hud.style.display = "none"; toastEl.style.display = "none"; }
+  if (q.get("pose")) {
+    const A = targetAmplitude();
+    const pose = q.get("pose");
+    loadScene(first).then(() => {
+      state.scene = first; trimTextures(first);
+      state.duskT = state.dusk[first] ? 1 : 0; state.moonT = state.moon[first] ? 1 : 0; markNight();
+      state.started = true; $("#start").classList.add("gone"); $("#start").inert = true; hud.inert = false; fadeIn = 1;
+      if (pose === "back") { swing.th = -A; swing.w = 0; }
+      else if (pose === "front") { swing.th = A; swing.w = 0; }
+      else if (pose === "bottom") { swing.th = 0; swing.w = Math.sqrt(2 * G / swing.length * (1 - Math.cos(A))); }
+      else if (pose === "bottomback") { swing.th = 0; swing.w = -Math.sqrt(2 * G / swing.length * (1 - Math.cos(A))); }
+      swing.peakAbs = A; swing.paused = (q.get("run") !== "1");
+      view.pitch = Math.max(-0.76, 0.80 * swing.th - 0.12); view.pitchVel = 0; updateView(0.001);
+    });
+  }
+})();
+
+window.SwingDebug = { state, swing, view, tex, audio, leaves, setScene, isGL2 };   // for checks from the console
+let last = performance.now();
+function frame(now) {
+  requestAnimationFrame(frame);
+  let dt = (now - last) / 1000; last = now;
+  if (dt > 0.05) dt = 0.05;
+  clock += dt;
+  if (state.started && !swing.paused) stepSwing(dt);
+  if (state.started) updateView(dt);
+  // dusk and moon ease in and out over a couple of seconds
+  const dT = state.dusk[state.scene] ? 1 : 0, mT = state.moon[state.scene] ? 1 : 0;
+  state.duskT += (dT - state.duskT) * Math.min(1, dt * 1.1); if (Math.abs(dT - state.duskT) < 0.002) state.duskT = dT;
+  state.moonT += (mT - state.moonT) * Math.min(1, dt * 1.1); if (Math.abs(mT - state.moonT) < 0.002) state.moonT = mT;
+  if (state.hudTimer > 0 && state.started) { state.hudTimer -= dt; if (state.hudTimer <= 0 && !document.activeElement?.closest?.("#hud")) hideHud(); }
+  updateAudio(dt);
+  if (state.started) { draw(dt); drawOverlay(dt); }
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

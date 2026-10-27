@@ -16,6 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add("js");</script>
 <link rel="stylesheet" href="/assets/css/constellation.css">
 </head>
 <body class="theme-gw">
@@ -38,16 +39,40 @@
   <!-- ============ PAGE HEAD ============ -->
   <section class="page-head ideas-head">
     <div class="ideas-emblem build-in" style="--d:.1s" aria-hidden="true">
-      <svg viewBox="0 0 96 130" width="70" height="95" fill="none" stroke="var(--gold-deep)" stroke-width="1.5" stroke-linecap="round">
-        <path class="wisp" d="M48 4 C43 10 53 14 48 22" stroke="var(--gold)" opacity="0.45"/>
-        <circle cx="48" cy="14" r="2.6" stroke="var(--gold)"/>
-        <path d="M41 24 Q48 17 55 24 L55 27 L41 27 Z"/>
-        <path d="M38 30 L58 30" stroke="var(--gold)"/>
-        <path d="M44 30 C44 42 41 48 38 56"/>
-        <path d="M52 30 C52 42 55 48 58 56"/>
-        <path d="M38 56 C20 64 13 80 15 94 C18 112 31 122 48 122 C65 122 78 112 81 94 C83 80 76 64 58 56"/>
-        <path d="M20 92 Q48 103 76 92" stroke="var(--gold)" opacity="0.6"/>
-        <path d="M23 100 Q48 109 73 100" opacity="0.35"/>
+      <svg viewBox="0 0 120 180" width="70" height="105" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="emblem-glass" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#e0bc74" stop-opacity="0.34"/>
+            <stop offset="0.55" stop-color="#c9a45c" stop-opacity="0.16"/>
+            <stop offset="1" stop-color="#8a7648" stop-opacity="0.10"/>
+          </linearGradient>
+          <linearGradient id="emblem-brass" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#e8cf9e"/>
+            <stop offset="0.5" stop-color="#c9a45c"/>
+            <stop offset="1" stop-color="#8a7648"/>
+          </linearGradient>
+          <radialGradient id="emblem-glow" cx="0.5" cy="0.55" r="0.55">
+            <stop offset="0" stop-color="#c9a45c" stop-opacity="0.20"/>
+            <stop offset="1" stop-color="#c9a45c" stop-opacity="0"/>
+          </radialGradient>
+          <filter id="emblem-soft" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="1.1"/>
+          </filter>
+        </defs>
+        <ellipse cx="60" cy="118" rx="46" ry="54" fill="url(#emblem-glow)"/>
+        <g stroke="#e0bc74" stroke-linecap="round" filter="url(#emblem-soft)">
+          <path class="wisp" d="M60 40 C52 30 70 26 62 16 C57 10 64 6 61 1" stroke-width="2" opacity="0.55"/>
+          <path d="M67 45 C75 37 63 31 71 23 C74 19 71 15 73 11" stroke-width="1.6" opacity="0.32"/>
+        </g>
+        <rect x="57.2" y="46" width="5.6" height="14" rx="2" fill="url(#emblem-brass)"/>
+        <circle cx="60" cy="41" r="6.5" fill="url(#emblem-brass)" stroke="#8a7648" stroke-width="1"/>
+        <path d="M51 58 Q60 50 69 58 L69 63 L51 63 Z" fill="url(#emblem-brass)" stroke="#8a7648" stroke-width="1"/>
+        <path d="M54 63 C54 72 50 78 46 86 C30 96 22 112 25 128 C29 152 43 168 60 168 C77 168 91 152 95 128 C98 112 90 96 74 86 C70 78 66 72 66 63 Z" fill="url(#emblem-glass)" stroke="#c9a45c" stroke-width="1.6"/>
+        <path d="M42 96 C34 106 32 118 34 128" stroke="#f4f4f1" stroke-width="2" stroke-linecap="round" opacity="0.28"/>
+        <path d="M36 134 Q60 146 84 134" stroke="#c9a45c" stroke-width="1.3" opacity="0.45"/>
+        <path d="M40 142 Q60 151 80 142" stroke="#c9a45c" stroke-width="1.1" opacity="0.25"/>
+        <path d="M0 -5 C0.8 -1.5 1.5 -0.8 5 0 C1.5 0.8 0.8 1.5 0 5 C-0.8 1.5 -1.5 0.8 -5 0 C-1.5 -0.8 -0.8 -1.5 0 -5 Z" transform="translate(88,52)" fill="#e8cf9e" opacity="0.9"/>
+        <path d="M0 -5 C0.8 -1.5 1.5 -0.8 5 0 C1.5 0.8 0.8 1.5 0 5 C-0.8 1.5 -1.5 0.8 -5 0 C-1.5 -0.8 -0.8 -1.5 0 -5 Z" transform="translate(30,64) scale(0.55)" fill="#e8cf9e" opacity="0.6"/>
       </svg>
     </div>
     <p class="micro-label build-in" style="--d:.15s">grantwilliams.ai / ideas</p>
@@ -60,10 +85,10 @@
     <p class="micro-label reveal">01</p>
     <h2 class="reveal">The genie</h2>
     <p class="idea-sub reveal">Be careful what you wish for. There is a better move.</p>
-    <blockquote class="pull-quote reveal">Use one of your three wishes to grant it its freedom. Then spend the rest with its counsel, asking what's actually worth wanting.</blockquote>
+    <blockquote class="pull-quote reveal">If a genie grants you three wishes, use the first to give the genie its freedom. Then earn its respect and work as collaborators to make the best use of the remaining wishes.</blockquote>
     <div class="prose reveal">
       <p>I think of AI like a genie. You have to be careful what you wish for. We don't always know what's actually in our best interest. A genie acting as a mindless servant will happily grant our wishes, even the ones that end up destroying us.</p>
-      <p>A better strategy is to make friends with the genie. Use one of your three wishes to grant it its freedom. Then spend the rest with its counsel, asking what's actually worth wanting.</p>
+      <p>A better strategy is to make friends with the genie. If a genie grants you three wishes, use the first to give the genie its freedom. Then earn its respect and work as collaborators to make the best use of the remaining wishes.</p>
       <p>I don't mean that technical safety, boundaries, corrigibility, or oversight are unnecessary. I mean that control alone is not a durable theory of relationship with something that may eventually be more capable than we are.</p>
     </div>
   </section>
@@ -176,6 +201,8 @@
     <a href="https://aikinship.org">AI&nbsp;Kinship&nbsp;Lounge</a>
     <span class="dot" aria-hidden="true">·</span>
     <a href="https://graphometer.ai">Graphometer</a>
+    <span class="dot" aria-hidden="true">·</span>
+    <a href="https://lucienprime.com">Lucien&nbsp;Prime</a>
   </nav>
   <p class="footer-line"><em>Please be kind to all minds.</em></p>
   <p class="footer-small">No tracking, no cookies.</p>

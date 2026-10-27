@@ -95,6 +95,15 @@
                 padding:12px 34px; background:transparent; color:#dedede; border:1px solid #9a9a9a;
                 cursor:pointer; transition:background .15s, color .15s; }
   #win button:hover { background:#dedede; color:#050505; }
+  #win-tag:empty { display:none; }
+  /* the finale: the epilogue scene plays behind the card, so the card goes transparent */
+  #win.final { background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 40%, rgba(12,10,18,.42) 100%);
+               justify-content:flex-start; padding-top:calc(13vh + env(safe-area-inset-top)); gap:18px; }
+  #win.final h1 { color:#fff9ee; text-shadow:0 2px 22px rgba(40,20,60,.55), 0 0 2px rgba(0,0,0,.4); }
+  #win.final p { color:#fff0d2; text-shadow:0 1px 10px rgba(40,20,60,.7); }
+  #win.final #win-tag { font-size:13px; letter-spacing:.7em; text-indent:.7em; color:#ffffff; opacity:.92; margin-top:6px; }
+  #win.final button { border-color:#fff3d6; color:#fff9ee; background:rgba(20,12,30,.28); margin-top:22vh; }
+  #win.final button:hover { background:#fff9ee; color:#2a1f3a; }
 </style>
 </head>
 <body>
@@ -193,6 +202,7 @@
 <div id="win" class="mono">
   <h1 id="win-title">YOU&nbsp;REACHED&nbsp;THE&nbsp;SURFACE</h1>
   <p id="win-copy">all sublevels behind you — daylight comes next</p>
+  <p id="win-tag"></p>
   <button id="again">restart</button>
 </div>
 
@@ -373,6 +383,12 @@ const CONFIG = {
   FOOTSTEP_TICKS: false,  // robot's mechanical foot-ticks (off — they fight the beat)
   SERVO_MAX_DIST: 560,    // robot audible within this range
   BEAT_ENABLED: true,
+
+  // searchlights (Session 10) — sweeping masts on the surface levels. Rays
+  // start past the mast's own one-tile footing; being lit sounds a floor-wide
+  // alarm (NOISE_PANEL_RADIUS) at most once per cooldown
+  SEARCHLIGHT_FOOT: 34,
+  SEARCHLIGHT_COOL: 2.2,
 
   // feel
   CAUGHT_FREEZE: 0.55,    // seconds of flash before the reset lands
@@ -1228,7 +1244,7 @@ const LEVEL_PERIMETER = {
   spawn: { x:242, y:682 },
   safeRect: { x:220, y:660, w:88, h:88 },
   exitRect: { x:1364, y:88, w:88, h:132 },
-  exitKind: 'gate', end: true,
+  exitKind: 'gate', end: false,
   panelPos: { x:1342, y:594 },
   breakers: [ { x:154, y:462 }, { x:726, y:418 }, { x:1386, y:374 } ],
   robots: [
@@ -1284,6 +1300,233 @@ const LEVEL_PERIMETER = {
   vents: [],
 };
 LEVELS.push(LEVEL_PERIMETER);
+
+/* ── LEVELS[9] + [10]: SURFACE · THE RAILHEAD and SURFACE · DAYBREAK — Session 10
+   The finale. The perimeter gate now hands to the marshalling yard (searchlights,
+   the hound pack, a coupler press) and the yard to the substation road out
+   (the Warden walker, the rotary disconnect, a dawn that the isolators bring
+   up). Daybreak is the only end:true level; its exitKind 'road' lifts a boom
+   barrier and plays the epilogue. Canonical source: workbench/level_finale.js */
+const LEVEL_RAILHEAD = {
+  name: 'SURFACE · THE RAILHEAD',
+  intro: 'THE YARD BEYOND THE FENCE. STAY OUT OF THE LIGHTS. POWER THE CUTTING GATE.',
+  gridW: 36, gridH: 19,
+  wallRects: [
+    [0,0,36,1], [0,18,36,1], [0,0,1,19], [35,0,1,19],
+    [2,2,6,2], [10,2,5,2], [17,2,6,2], [27,2,6,2],
+    [2,6,5,2], [9,6,7,2], [18,6,6,2], [27,6,5,2],
+    [3,10,6,2], [12,10,4,2], [19,10,7,2], [28,10,4,2],
+    [4,14,5,2], [11,14,4,2], [24,14,6,2], [33,14,1,2],
+    [13,5,1,1], [13,12,1,1],
+    [30,8,1,1], [32,8,2,2],
+    [16,16,2,1],
+  ],
+  fenceRects: [
+    [15,15,1,3], [22,15,1,3], [16,15,2,1], [20,15,2,1],
+  ],
+  spawn: { x:110, y:748 },
+  safeRect: { x:46, y:616, w:86, h:88 },
+  exitRect: { x:1452, y:46, w:88, h:84 },
+  exitKind: 'gate',
+  wording: { breaker:'RELAY', hud:'relays', powered:'CUTTING GATE POWERED',
+             hint:'throw the three relays to power the cutting gate' },
+  panelPos: { x:1160, y:132 },
+  breakers: [ { x:110, y:66 }, { x:858, y:770 }, { x:1474, y:462 } ],
+  robots: [
+    { x:286, y:198, face:0, variant:'hound',
+      mul:{ vision:1.05 }, roam:{ x:44, y:44, w:660, h:750 } },
+    { x:1254, y:594, face:Math.PI, variant:'hound',
+      mul:{ patrol:1.05, pause:0.9 }, roam:{ x:836, y:44, w:704, h:750 } },
+    { x:902, y:396, face:Math.PI, variant:'tread',
+      mul:{ patrol:1.06, hunt:1.06, pause:0.85 }, roam:{ x:352, y:352, w:880, h:88 } },
+  ],
+  alertSpawn: { x:462, y:572, face:Math.PI },
+  press: { x:748, y:308, ang:0, open:44, closed:4, half:28, jaw:48, teeth:5, period:8.4 },
+  searchlights: [
+    { x:594, y:242, a0:-0.30, a1:-2.84, period:11, range:400, half:0.24 },
+    { x:1342, y:374, a0:2.62, a1:3.66, period:8, range:420, half:0.26 },
+  ],
+  music: { key:'railhead', bpm:132, swing:0.06,
+           kick:[0,3,6,8,11,14,16,19,22,24,27,30], snare:[4,12,20,28],
+           hat16:true, arp:[0,2,3,6,8,10,11,14,16,18,19,22,24,26,27,30] },
+  difficulty: { patrolSpeed:84, huntSpeed:138, visionRange:420,
+                patrolPause:0.80, reactTime:0.60, searchTime:2.4, huntGiveUp:10 },
+  style: {
+    bg:'#0a0c14', floor:'#141826', floorTex:0.05,
+    wall:'#2e3444', wallTop:'#5c6680', wallDark:'#0f121a',
+    line:'208,218,240', accent:'186,132,255', safe:'120,196,255', good:'140,225,170',
+    robotTone:'light', playerTone:'light', scanlines:0, grainAlpha:0.05, vignette:0.42,
+  },
+  deco: [
+    { type:'track', x1:44, x2:1540, y:132 },
+    { type:'track', x1:44, x2:1540, y:308 },
+    { type:'track', x1:44, x2:1540, y:484 },
+    { type:'track', x1:44, x2:1496, y:660 },
+    { type:'railcar', kind:'boxcar', x:88, y:88, w:264, h:88, tone:'rust' },
+    { type:'railcar', kind:'tanker', x:440, y:88, w:220, h:88 },
+    { type:'railcar', kind:'boxcar', x:748, y:88, w:264, h:88, tone:'slate' },
+    { type:'railcar', kind:'loco', x:1188, y:88, w:264, h:88 },
+    { type:'railcar', kind:'flatcar', x:88, y:264, w:220, h:88 },
+    { type:'railcar', kind:'boxcar', x:396, y:264, w:308, h:88, tone:'olive' },
+    { type:'railcar', kind:'boxcar', x:792, y:264, w:264, h:88, tone:'rust' },
+    { type:'railcar', kind:'tanker', x:1188, y:264, w:220, h:88 },
+    { type:'railcar', kind:'boxcar', x:132, y:440, w:264, h:88, tone:'slate' },
+    { type:'railcar', kind:'tanker', x:528, y:440, w:176, h:88 },
+    { type:'railcar', kind:'boxcar', x:836, y:440, w:308, h:88, tone:'olive' },
+    { type:'railcar', kind:'flatcar', x:1232, y:440, w:176, h:88 },
+    { type:'railcar', kind:'tanker', x:176, y:616, w:220, h:88 },
+    { type:'railcar', kind:'boxcar', x:484, y:616, w:176, h:88, tone:'rust' },
+    { type:'railcar', kind:'boxcar', x:1056, y:616, w:264, h:88, tone:'slate' },
+    { type:'railcar', kind:'bumper', x:1452, y:616, w:44, h:88 },
+    { type:'railcar', kind:'dock', x:1408, y:352, w:88, h:88 },
+    { type:'railcar', kind:'hut', x:704, y:704, w:88, h:44 },
+    { type:'gantry', x:594, y1:242, y2:550 },
+    { type:'lamp', x:418, y:66, period:2.3, color:'accent' },
+    { type:'lamp', x:1100, y:66, period:2.7, color:'accent' },
+    { type:'lamp', x:1100, y:770, period:2.1, color:'accent' },
+    { type:'lamp', x:330, y:396, period:2.5, color:'accent' },
+    { type:'lamp', x:1474, y:286, period:1.9, color:'safe' },
+    { type:'lamp', x:1496, y:726, period:3.1, color:'accent' },
+    { type:'circuit', pts:[[110,66],[616,66],[1232,66],[1452,88]], pulses:3, speed:124 },
+    { type:'circuit', pts:[[858,770],[1012,770],[1386,770],[1474,726],[1474,528]], pulses:3, speed:110 },
+    { type:'circuit', pts:[[1474,462],[1518,418],[1518,220],[1496,132]], pulses:2, speed:100 },
+    { type:'stripes', x:748, y:238, w:80, h:14, ang:0 },
+    { type:'stripes', x:748, y:378, w:80, h:14, ang:0 },
+    { type:'stripes', x:1386, y:418, w:60, h:12, ang:Math.PI/2 },
+    { type:'pipe', pts:[[1232,352],[1232,396],[1298,396]], w:7 },
+    { type:'pipe', pts:[[396,704],[396,748],[484,748]], w:6 },
+    { type:'sign', x:110, y:110, text:'SWITCH', size:16, rot:0 },
+    { type:'sign', x:858, y:726, text:'SIGNAL BOX', size:15, rot:0 },
+    { type:'sign', x:1474, y:418, text:'DOCK', size:16, rot:0 },
+    { type:'sign', x:1320, y:198, text:'CUTTING', size:14, rot:0 },
+  ],
+  pools: [
+    [110,66,120,0.05], [418,66,120,0.04], [1100,66,130,0.04], [1474,88,130,0.06],
+    [330,396,140,0.05], [902,396,150,0.05], [1342,396,120,0.05],
+    [858,770,130,0.05], [1474,462,130,0.06], [110,748,120,0.04],
+  ],
+  stencil: { text:'04', x:1320, y:396, rot:0.02 },
+  labels: [ ['S W I T C H',110,26], ['N O R T H  A I S L E',660,198],
+            ['T R A C K  B',968,396], ['S I G N A L',858,662],
+            ['D O C K',1452,330], ['C U T T I N G',1496,26] ],
+  vents: [],
+};
+
+const LEVEL_DAYBREAK = {
+  name: 'SURFACE · DAYBREAK',
+  intro: 'THE SUBSTATION FEEDS THE FLOODS. THROW ALL THREE ISOLATORS. THE BARRIER FAILS OPEN.',
+  endTitle: 'YOU ARE OUT',
+  endText: 'the bunker is dark behind you · the sun is up',
+  endTag: 'THE END',
+  gridW: 36, gridH: 19,
+  wallRects: [
+    [0,0,36,1], [0,18,36,1], [0,0,1,19], [35,0,1,19],
+    [3,3,2,2], [8,3,2,2], [13,3,2,2], [21,3,2,2], [26,3,2,2], [31,3,2,2],
+    [3,7,2,2], [8,7,2,2], [13,7,2,2], [21,7,2,2], [26,7,2,2], [31,7,2,2],
+    [16,1,4,3], [16,8,4,1],
+    [6,13,2,2], [16,14,3,2], [12,15,1,1], [27,13,1,1], [30,15,3,2],
+  ],
+  fenceRects: [
+    [1,9,4,1], [7,9,10,1], [19,9,10,1], [31,9,4,1],
+    [1,12,2,1], [5,12,19,1], [26,12,9,1],
+  ],
+  spawn: { x:110, y:748 },
+  safeRect: { x:46, y:616, w:88, h:88 },
+  exitRect: { x:1452, y:440, w:88, h:88 },
+  exitKind: 'road', end: true, epilogue: true, endLabel: 'THE ROAD OUT',
+  wording: { breaker:'ISOLATOR', hud:'isolators', hudDone:'barrier released',
+             powered:'GRID ISOLATED · BARRIER RELEASED', dead:'BARRIER LIVE',
+             hint:'throw the three isolators to drop the barrier',
+             panelOpen:'UNITS DOWN · BARRIER OPEN', panelDead:'UNITS DOWN · BARRIER STILL LIVE' },
+  panelPos: { x:842, y:660 },
+  breakers: [ { x:110, y:66 }, { x:1474, y:66 }, { x:1474, y:770 } ],
+  robots: [
+    { x:880, y:484, face:Math.PI, variant:'walker',
+      mul:{ pause:0.9 }, roam:{ x:66, y:440, w:1452, h:88 } },
+    { x:242, y:264, face:Math.PI/2, variant:'hound',
+      mul:{ vision:1.05 }, roam:{ x:44, y:44, w:660, h:352 } },
+    { x:1254, y:264, face:Math.PI/2, variant:'arachnid',
+      mul:{ vision:1.06, pause:1.1 }, roam:{ x:880, y:44, w:660, h:352 } },
+  ],
+  alertSpawn: { x:506, y:264, face:Math.PI },
+  gear: { x:792, y:264, r:84, slotHalf:34, period:13 },
+  searchlights: [
+    { x:550, y:682, a0:-2.27, a1:-0.87, period:9, range:380, half:0.22 },
+    { x:1210, y:594, a0:-2.37, a1:-1.07, period:7.5, range:380, half:0.22 },
+  ],
+  dawn: { top0:'#120d1c', hor0:'#2a1f3a', top1:'#5d5aa0', hor1:'#ffb36e',
+          top2:'#7fb4e6', hor2:'#fff1cc', wash:'255,172,80' },
+  music: { key:'daybreak', bpm:120, swing:0.08,
+           kick:[0,8,10,16,24,26], snare:[4,12,20,28], hat16:true,
+           arp:[0,3,7,12,16,19,23,28] },
+  difficulty: { patrolSpeed:84, huntSpeed:142, visionRange:430,
+                patrolPause:0.84, reactTime:0.62, searchTime:2.5, huntGiveUp:11 },
+  style: {
+    bg:'#1a1426', floor:'#2a2236', floorTex:0.04,
+    wall:'#4a3f58', wallTop:'#8b7b9c', wallDark:'#1a1422',
+    line:'255,238,220', accent:'255,176,64', safe:'140,200,255', good:'170,230,170',
+    robotTone:'light', playerTone:'light', scanlines:0, grainAlpha:0.04, vignette:0.30,
+  },
+  deco: [
+    { type:'road', x1:44, x2:1540, y:484, h:88 },
+    { type:'substation', kind:'transformer', x:132, y:132, w:88, h:88 },
+    { type:'substation', kind:'transformer', x:352, y:132, w:88, h:88 },
+    { type:'substation', kind:'transformer', x:572, y:132, w:88, h:88 },
+    { type:'substation', kind:'transformer', x:924, y:132, w:88, h:88 },
+    { type:'substation', kind:'transformer', x:1144, y:132, w:88, h:88 },
+    { type:'substation', kind:'transformer', x:1364, y:132, w:88, h:88 },
+    { type:'substation', kind:'transformer', x:132, y:308, w:88, h:88 },
+    { type:'substation', kind:'transformer', x:352, y:308, w:88, h:88 },
+    { type:'substation', kind:'transformer', x:572, y:308, w:88, h:88 },
+    { type:'substation', kind:'transformer', x:924, y:308, w:88, h:88 },
+    { type:'substation', kind:'transformer', x:1144, y:308, w:88, h:88 },
+    { type:'substation', kind:'transformer', x:1364, y:308, w:88, h:88 },
+    { type:'substation', kind:'bunker', x:704, y:44, w:176, h:132 },
+    { type:'substation', kind:'sill', x:704, y:352, w:176, h:44 },
+    { type:'substation', kind:'tanks', x:264, y:572, w:88, h:88 },
+    { type:'substation', kind:'house', x:704, y:616, w:132, h:88 },
+    { type:'substation', kind:'shed', x:1320, y:660, w:132, h:88 },
+    { type:'busbar', pts:[[176,110],[396,110],[616,110]] },
+    { type:'busbar', pts:[[968,110],[1188,110],[1408,110]] },
+    { type:'busbar', pts:[[176,374],[396,374],[616,374]] },
+    { type:'busbar', pts:[[968,374],[1188,374],[1408,374]] },
+    { type:'lamp', x:242, y:418, period:2.4, color:'accent' },
+    { type:'lamp', x:770, y:418, period:2.0, color:'accent' },
+    { type:'lamp', x:1298, y:418, period:2.6, color:'accent' },
+    { type:'lamp', x:154, y:550, period:2.2, color:'accent' },
+    { type:'lamp', x:1078, y:550, period:2.8, color:'accent' },
+    { type:'lamp', x:1474, y:616, period:1.8, color:'safe' },
+    { type:'circuit', pts:[[110,66],[110,220],[264,264],[506,264],[660,264]], pulses:3, speed:120 },
+    { type:'circuit', pts:[[1474,66],[1474,220],[1474,396],[1496,440]], pulses:3, speed:110 },
+    { type:'circuit', pts:[[1474,770],[1474,616],[1496,528]], pulses:2, speed:100 },
+    { type:'stripes', x:242, y:418, w:88, h:14, ang:0 },
+    { type:'stripes', x:770, y:418, w:88, h:14, ang:0 },
+    { type:'stripes', x:1298, y:418, w:88, h:14, ang:0 },
+    { type:'stripes', x:154, y:550, w:88, h:14, ang:0 },
+    { type:'stripes', x:1078, y:550, w:88, h:14, ang:0 },
+    { type:'pipe', pts:[[352,616],[440,616],[440,704]], w:7 },
+    { type:'pipe', pts:[[836,704],[946,704],[946,748]], w:6 },
+    { type:'steamer', x:308, y:660, period:3.8 },
+    { type:'sign', x:110, y:110, text:'ISO 1', size:16, rot:0 },
+    { type:'sign', x:1474, y:110, text:'ISO 2', size:16, rot:0 },
+    { type:'sign', x:1474, y:726, text:'ISO 3', size:16, rot:0 },
+    { type:'sign', x:792, y:198, text:'DISCONNECT', size:14, rot:0 },
+    { type:'sign', x:1386, y:484, text:'OUT', size:26, rot:0 },
+  ],
+  pools: [
+    [110,66,120,0.05], [1474,66,120,0.05], [1474,770,120,0.05],
+    [242,418,130,0.05], [770,418,130,0.05], [1298,418,130,0.05],
+    [154,550,120,0.05], [1078,550,120,0.05], [1496,484,160,0.07],
+    [792,264,170,0.06], [110,748,110,0.04],
+  ],
+  stencil: { text:'00', x:1034, y:770, rot:-0.02 },
+  labels: [ ['I S O  1',110,26], ['I S O  2',1474,26], ['I S O  3',1474,810],
+            ['S U B S T A T I O N',792,26], ['T H E  R O A D',330,530],
+            ['C O N T R O L',770,606], ['B A R R I E R',1496,420] ],
+  vents: [ [550,770], [1386,770] ],
+};
+LEVELS.push(LEVEL_RAILHEAD);
+LEVELS.push(LEVEL_DAYBREAK);
 
 /* run-state that survives floor changes */
 let currentLevel = 0;
@@ -1866,6 +2109,10 @@ const VARIANTS = {
   spider: { r: 15, draw: 'spider', mul: { patrol: 1.15, hunt: 0.95, vision: 0.9,  turn: 1.5,  pause: 0.85 }, grateMul: 1.0  },
   arm:    { r: 18, draw: 'arm',    mul: { patrol: 0.85, hunt: 1.05, vision: 1.15, turn: 0.8,  pause: 1    }, grateMul: null },
   arachnid:{r: 18, draw: 'arachnid',mul:{ patrol: 0.92, hunt: 1.15, vision: 1.05, turn: 0.8,  pause: 1.15 }, grateMul: 0.9 },
+  // Session 10 finale units: the Warden walker (slow to turn, sees far, runs you
+  // down) and the hound (a sprinter with a narrow, short sensor)
+  walker: { r: 20, draw: 'walker', mul: { patrol: 0.78, hunt: 1.18, vision: 1.3,  turn: 0.5,  pause: 1.25 }, grateMul: 0.7  },
+  hound:  { r: 14, draw: 'hound',  mul: { patrol: 1.25, hunt: 1.12, vision: 0.78, turn: 1.7,  pause: 0.65 }, grateMul: 0.9  },
 };
 function makeRobot(def, id) {
   const v = VARIANTS[def.variant] || VARIANTS.dome;
@@ -1898,6 +2145,7 @@ const rTurn   = rb => CONFIG.ROBOT_TURN_RATE * (rb.v.mul.turn || 1) * (rb.mul.tu
 const rGrate  = rb => rb.v.grateMul == null ? CONFIG.GRATE_ROBOT_MUL : rb.v.grateMul;
 
 const gear = { on: true, x: CONFIG.GEAR_X, y: CONFIG.GEAR_Y, angle: 0.6, playerIn: 0 };
+const searchlights = [];   // Session 10: sweeping masts, rebuilt per floor by applyLevel()
 const press = { on: false, t: 0, cos: 1, sin: 0, half: 40, phase: 'open',
                 playerIn: 0, clank: 0 };
 
@@ -2026,7 +2274,7 @@ function resetLevelState(opts) {
   updateHUD();
   particles.length = 0; toasts.length = 0; noises.length = 0;
   state.mode = 'PLAY';
-  winEl.classList.remove('show');
+  winEl.classList.remove('show'); winEl.classList.remove('final');
   // the panel kills the beat + dims the hum; a reset floor gets them back
   // (also fixes the Session-2 quirk where a post-panel gear death left the
   //  music dead for the rest of the run)
@@ -2115,6 +2363,12 @@ function applyLevel(L) {
   for (let i = 0; i < 14; i++)
     motes.push({ x: Math.random() * WORLD_W, y: Math.random() * WORLD_H, p: Math.random() * TAU, s: 0.5 + Math.random() });
 
+  searchlights.length = 0;   // Session 10: sweeping masts
+  for (const sl of L.searchlights || [])
+    searchlights.push({ x: sl.x, y: sl.y, a0: sl.a0, a1: sl.a1 !== undefined ? sl.a1 : sl.a0,
+                        period: Math.max(0.5, sl.period || 9), range: sl.range || 380,
+                        half: sl.half || 0.24, phase: sl.phase || 0, ang: sl.a0, lit: 0, cool: 0 });
+
   buildDeco(L);   // split animated vs baked deco; steamers join the vent list
   paintStatic(L);
   computeGearHousings();
@@ -2141,8 +2395,8 @@ function loadLevel(index, opts) {
   } else setBeatPreset(LEVEL.music);
   if (syncBeatLabUI) syncBeatLabUI();
   if (syncTuneUI) syncTuneUI();   // the floor's own difficulty is now live — show it
-  hintEl.textContent = 'wasd · click · drag — throw the breakers to power the ' +
-                       exitNoun().toLowerCase() +
+  hintEl.textContent = 'wasd · click · drag — ' +
+                       W('hint', 'throw the breakers to power the ' + exitNoun().toLowerCase()) +
                        ' · shift (or SNEAK) to move quietly';
   resize();   // world size may differ; also snaps the camera to the new spawn
 }
@@ -2159,7 +2413,16 @@ function showSurfaceEnd() {
   state.mode = 'WIN'; state.winT = 0; state.surface = true;
   document.getElementById('win-title').textContent = LEVEL.endTitle || 'YOU REACHED THE SURFACE';
   document.getElementById('win-copy').textContent = LEVEL.endText || 'all sublevels behind you · daylight comes next';
-  sfxWin();
+  document.getElementById('win-tag').textContent = LEVEL.endTag || '';
+  document.getElementById('again').textContent = LEVEL.epilogue ? 'play again' : 'restart';
+  winEl.classList.toggle('final', !!LEVEL.epilogue);
+  if (LEVEL.epilogue) hudEl.classList.add('hide');   // nothing left to count; updateHUD() restores it on restart
+  if (LEVEL.epilogue && AC) {   // the groove gives way to the dawn drone
+    beat.on = false;
+    if (beatBus) beatBus.gain.setTargetAtTime(0, AC.currentTime, 1.1);
+    if (humG) humG.gain.setTargetAtTime(CONFIG.HUM_VOL * 0.25, AC.currentTime, 2.5);
+  }
+  sfxWin(!!LEVEL.epilogue);
 }
 
 /* ── input: keyboard + unified pointer (mouse/touch) ────────────────────── */
@@ -2904,6 +3167,63 @@ function updatePress(dt) {
   }
 }
 
+/* ── searchlights (Session 10) ──────────────────────────────────────────────
+   Sweeping masts on the surface floors. The beam is sight, not touch: it is
+   blocked by opaque walls and passes through chain-link like a robot's cone.
+   Be lit and the whole floor hears it — every calm unit walks to the spot it
+   saw you at (NOISE_PANEL_RADIUS), once per cooldown. On a dawn floor the
+   masts run off the same grid as the floods: each isolator dims them by a
+   third, and the third one kills them.                                     */
+const beamPts = [];
+function searchlightAngle(sl, t) {
+  const k = 0.5 - 0.5 * Math.cos(TAU * (t + sl.phase) / sl.period);
+  return sl.a0 + (sl.a1 - sl.a0) * k;
+}
+const searchlightPower = () => LEVEL.dawn ? clamp(1 - state.lightLevel, 0, 1) : 1;
+function beamLOS(sl, bx, by) {
+  const d = dist(sl.x, sl.y, bx, by), steps = Math.ceil(d / CONFIG.RAY_STEP);
+  for (let i = 1; i < steps; i++) {
+    const t = i / steps, x = sl.x + (bx - sl.x) * t, y = sl.y + (by - sl.y) * t;
+    if (d * t < CONFIG.SEARCHLIGHT_FOOT) continue;   // the mast's own footing
+    if (visionWallAtPoint(x, y)) return false;
+  }
+  return true;
+}
+function castBeam(sl) {
+  beamPts.length = 0;
+  const n = 21, half = sl.half, range = sl.range;
+  for (let i = 0; i <= n; i++) {
+    const a = sl.ang - half + (i / n) * half * 2, ca = Math.cos(a), sa = Math.sin(a);
+    let d = CONFIG.SEARCHLIGHT_FOOT;
+    for (; d < range; d += CONFIG.RAY_STEP) if (visionWallAtPoint(sl.x + ca * d, sl.y + sa * d)) break;
+    d = Math.min(d, range);
+    beamPts.push(sl.x + ca * d, sl.y + sa * d);
+  }
+}
+function playerInBeam(sl) {
+  if (playerHidden()) return false;
+  const d = dist(sl.x, sl.y, player.x, player.y);
+  if (d >= sl.range || d < CONFIG.SEARCHLIGHT_FOOT) return false;
+  if (Math.abs(wrapA(Math.atan2(player.y - sl.y, player.x - sl.x) - sl.ang)) > sl.half + 0.02) return false;
+  return beamLOS(sl, player.x, player.y);
+}
+function updateSearchlights(dt) {
+  const power = searchlightPower();
+  for (const sl of searchlights) {
+    sl.cool = Math.max(0, sl.cool - dt);
+    const lit = power > 0.2 && playerInBeam(sl);
+    sl.lit = lit ? Math.min(1, sl.lit + dt * 6) : Math.max(0, sl.lit - dt * 3);
+    if (lit && sl.cool <= 0) {
+      sl.cool = CONFIG.SEARCHLIGHT_COOL;
+      emitNoise(player.x, player.y, CONFIG.NOISE_PANEL_RADIUS, 'searchlight');
+      state.shake = Math.max(state.shake, 3);
+      sfxSpotted(true);
+      toast('IN THE LIGHT — UNITS ALERTED');
+      hintEl.classList.add('gone'); state.hintCleared = true;
+    }
+  }
+}
+
 /* ── caught / win / panel ───────────────────────────────────────────────── */
 function doCaught(byGear) {
   if (state.mode !== 'PLAY') return;
@@ -2912,7 +3232,10 @@ function doCaught(byGear) {
   sfxCaught(byGear);
 }
 const liftPowered = () => state.powerHave >= state.powerNeed;
-const exitNoun = () => LEVEL.exitKind === 'vehicle' ? 'RIG' : LEVEL.exitKind === 'gate' ? 'GATE' : 'LIFT';
+const exitNoun = () => LEVEL.exitKind === 'vehicle' ? 'RIG' : LEVEL.exitKind === 'gate' ? 'GATE'
+                     : LEVEL.exitKind === 'road' ? 'BARRIER' : 'LIFT';
+// a floor may re-word its power story (Session 10: isolators drop a barrier)
+const W = (key, fallback) => (LEVEL.wording && LEVEL.wording[key]) || fallback;
 
 /* throwing one: the floor comes up a notch, the machinery spins up, and every
    robot within earshot comes to find out who did that */
@@ -2926,8 +3249,8 @@ function throwBreaker(b) {
   sfxBreaker(state.powerHave, state.powerNeed);
   syncPowerAudio(false);
   updateHUD();
-  toast(liftPowered() ? exitNoun() + ' POWERED · ' + state.powerHave + '/' + state.powerNeed
-                      : 'BREAKER ' + state.powerHave + '/' + state.powerNeed + ' THROWN');
+  toast(liftPowered() ? W('powered', exitNoun() + ' POWERED') + ' · ' + state.powerHave + '/' + state.powerNeed
+                      : W('breaker', 'BREAKER') + ' ' + state.powerHave + '/' + state.powerNeed + ' THROWN');
   hintEl.classList.add('gone'); state.hintCleared = true;
 }
 
@@ -2948,7 +3271,7 @@ function updateTriggers(dt) {
     for (const rb of robots) if (aliveRb(rb)) { enterState(rb, 'SHUTDOWN'); rb.path = null; }
     sfxPowerDown();
     emitNoise(CONFIG.PANEL_POS.x, CONFIG.PANEL_POS.y, CONFIG.NOISE_PANEL_RADIUS, 'panel');
-    toast(liftPowered() ? 'UNIT DOWN · DOORS OPEN' : 'UNIT DOWN · ' + exitNoun() + ' STILL DEAD');
+    toast(liftPowered() ? W('panelOpen', 'UNIT DOWN · DOORS OPEN') : W('panelDead', 'UNIT DOWN · ' + exitNoun() + ' STILL DEAD'));
     hintEl.classList.add('gone'); state.hintCleared = true;
   }
   if (state.exitUnlocked) state.unlockT += dt;
@@ -2963,7 +3286,7 @@ function updateTriggers(dt) {
   else if (!liftPowered()) {
     if (!state.padWarned) {
       state.padWarned = true;
-      toast(exitNoun() + ' DEAD — ' + (state.powerNeed - state.powerHave) + ' BREAKER' +
+      toast(W('dead', exitNoun() + ' DEAD') + ' — ' + (state.powerNeed - state.powerHave) + ' ' + W('breaker', 'BREAKER') +
             (state.powerNeed - state.powerHave === 1 ? '' : 'S') + ' TO THROW');
     }
     state.forceT = Math.max(0, state.forceT - dt * 2);
@@ -2971,7 +3294,8 @@ function updateTriggers(dt) {
     departFloor();
   } else {
     if (state.forceT === 0) toast((LEVEL.exitKind === 'vehicle' ? 'FORCING BAY DOOR' :
-                                  LEVEL.exitKind === 'gate' ? 'FORCING OUTER GATE' : 'FORCING DOORS') +
+                                  LEVEL.exitKind === 'gate' ? 'FORCING OUTER GATE' :
+                                  LEVEL.exitKind === 'road' ? 'FORCING THE BARRIER' : 'FORCING DOORS') +
                                   ' — UNIT STILL ACTIVE');
     state.forceT += dt;
     if (state.forceT >= CONFIG.ELEV_FORCE_TIME) departFloor();
@@ -3333,9 +3657,14 @@ function sfxElevator() {
   blip(880, 880, 0.5, 'sine', 0.06, 0.7, t + 1.45);
   blip(1318.5, 1318.5, 0.6, 'sine', 0.035, 0.7, t + 1.55);
 }
-function sfxWin() {
+function sfxWin(finale) {
   if (!AC) return;
   const t = AC.currentTime;
+  if (finale) {   // the epilogue gets a second, resolving chord once the sun is up
+    [261.63, 392.00, 523.25, 659.25, 783.99, 1046.5].forEach((fr, i) =>
+      blip(fr, fr, 2.6, 'sine', 0.035, 0.8, t + 3.4 + i * 0.3));
+    [196.00, 293.66, 392.00].forEach((fr, i) => blip(fr, fr, 3.2, 'triangle', 0.03, 0.75, t + 6.2 + i * 0.2));
+  }
   // gentle rising drone — a first hint of daylight
   const o1 = AC.createOscillator(); o1.type = 'sawtooth'; o1.frequency.value = 110;
   const o2 = AC.createOscillator(); o2.type = 'sawtooth'; o2.frequency.value = 165.2;
@@ -3638,8 +3967,8 @@ function updateHUD() {
   if (!state.powerNeed) { hudEl.classList.add('hide'); return; }
   hudEl.classList.remove('hide');
   const left = state.powerNeed - state.powerHave;
-  hudText.textContent = left === 0 ? exitNoun().toLowerCase() + ' powered'
-                      : 'power ' + state.powerHave + '/' + state.powerNeed;
+  hudText.textContent = left === 0 ? W('hudDone', exitNoun().toLowerCase() + ' powered')
+                      : W('hud', 'power') + ' ' + state.powerHave + '/' + state.powerNeed;
   hudEl.classList.toggle('done', left === 0);
   if (hudPips.children.length !== state.powerNeed) {
     hudPips.innerHTML = '';
@@ -5478,6 +5807,1101 @@ DECO_CUSTOM.planter = drawPlanterDeco;
 DECO_CUSTOM.lightmast = drawLightmastDeco;
 DECO_STATIC_TYPES.planter = 1;
 
+/* ═══ SESSION 10 — finale robots: the Warden walker and the hound ═══ */
+/* ─────────────────────────────────────────────────────────────────────────
+   WALKER — "THE WARDEN"            variant key `walker`   fn drawWalkerBody
+   Heavy bipedal sentry walker, top-down.  Local +X = forward, +Y = the
+   unit's right-hand side.  Collision radius 22; hull inside ~22, feet may
+   swing out to ~28 mid-stride.
+
+   Chain per leg:  hip (hull flank ±12.4) → thigh → knee (rear + outboard)
+   → shank → ankle → pastern → broad three-toed foot pad.
+   Everything is solved into module-level Float32Array scratch; the draw
+   function itself allocates nothing.
+   ───────────────────────────────────────────────────────────────────── */
+
+const WK_TAU  = Math.PI * 2;
+const WK_DUTY = 0.60;            // fraction of the cycle a foot spends planted
+
+/* Sole outline in foot-local space (+x = toe direction), 9 points: a square
+   heel, a squared-off ball, then three short splayed toes off the ball. */
+const WK_FOOT = new Float32Array([
+  -3.0, -2.6,
+   2.6, -3.2,
+   4.6, -2.7,
+   4.0, -0.9,
+   5.4,  0.0,
+   4.0,  0.9,
+   4.4,  2.7,
+   2.6,  3.2,
+  -3.0,  2.6,
+]);
+const WK_FOOT_N = 9;
+
+/* Hull silhouettes (chamfered nose, pointed tail). 8 points each. */
+const WK_MID = new Float32Array([
+  -14.4, -9.8,   9.0, -12.2,  13.8, -7.6,  16.0,  0.0,
+   13.8,  7.6,   9.0,  12.2, -14.4,  9.8, -16.4,  0.0,
+]);
+const WK_TOP = new Float32Array([
+  -11.2, -6.6,   6.4, -8.6,  10.6, -5.0,  12.6,  0.0,
+   10.6,  5.0,   6.4,  8.6, -11.2,  6.6, -13.0,  0.0,
+]);
+/* Shed armour plate that lies beside the wreck. 4 points. */
+const WK_SHED = new Float32Array([
+  -5.4, -3.0,  5.0, -2.2,  5.8, 2.6,  -4.6, 3.4,
+]);
+
+/* Wreck pose, per leg: kneeX kneeY ankX ankY footAng footScale. */
+const WK_WRECK = new Float32Array([
+  -5.2, -7.6,   1.4, -4.4, -2.35, 0.90,   // left leg folded under the hull
+  -2.6, 12.4,  -3.0, 17.5,  1.34, 1.00,   // right leg splayed straight out
+]);
+
+/* Per-leg pose scratch, 12 slots each:
+   0 hipX 1 hipY 2 kneeX 3 kneeY 4 ankX 5 ankY 6 footX 7 footY
+   8 footAng 9 lift 10 footScale 11 stridePos                     */
+const WK_POSE = new Float32Array(24);
+
+/* Emit a closed polygon from a flat table. Costs n+2 canvas ops. */
+function wkPoly(g, tbl, n) {
+  g.beginPath();
+  g.moveTo(tbl[0], tbl[1]);
+  for (let i = 1; i < n; i++) g.lineTo(tbl[i * 2], tbl[i * 2 + 1]);
+  g.closePath();
+}
+
+function drawWalkerBody(g, rb, o) {
+  const T2    = WK_TAU;
+  const dead  = !!o.dead;
+  const still = !!o.still || dead;
+  const hunt  = !dead && !!o.hunting;
+  const react = !dead && !!o.reacting;
+  const srch  = !dead && !!o.searching;
+  const t     = o.time || 0;
+  const ph    = (o.phase !== undefined ? o.phase : rb.walkT) || 0;
+  const cog   = rb.cogT || 0;
+  const lit   = dead ? 0 : Math.max(0, Math.min(1, (o.lit !== undefined ? o.lit : rb.glow) || 0));
+  const acc   = o.accent || '255,196,70';
+  const dk    = o.tone === 'dark';
+  const slumpRaw = rb.slumpT || 0;
+  const slump = dead ? 0 : (slumpRaw < 0 ? 0 : slumpRaw > 1 ? 1 : slumpRaw);
+  const walk  = still ? 0 : 1;
+
+  /* ── metal kit ────────────────────────────────────────────────────── */
+  const M0 = dead ? (dk ? '#4c4c4c' : '#8f8f8f') : (dk ? '#9a9a9a' : '#ededed'); // specular
+  const M1 = dead ? (dk ? '#3a3a3a' : '#666666') : (dk ? '#6a6a6a' : '#b8b8b8'); // mid plate
+  const M2 = dead ? (dk ? '#252525' : '#414141') : (dk ? '#3a3a3a' : '#6e6e6e'); // shade
+  const M3 = dead ? (dk ? '#0e0e0e' : '#1d1d1d') : (dk ? '#141414' : '#2c2c2c'); // structure
+  const M4 = dead ? (dk ? '#343434' : '#5c5c5c') : (dk ? '#555555' : '#9a9a9a'); // trim
+  const M5 = dk ? '#080808' : '#171717';                                          // cores
+  const LIMB = dead ? (dk ? '#1b1b1b' : '#2e2e2e') : (dk ? '#2d2d2d' : '#525252'); // limb casing
+  const SOLE = dead ? (dk ? '#141414' : '#252525') : (dk ? '#232323' : '#4a4a4a'); // planted pad
+  const RIM = dk ? 'rgba(205,205,205,0.26)' : 'rgba(255,255,255,0.30)';
+  const SEAM = dk ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.36)';
+  const aLamp = (0.15 + 0.8 * lit).toFixed(3);
+  const aTrim = (0.08 + 0.55 * lit).toFixed(3);
+
+  /* ── gait solve ───────────────────────────────────────────────────── */
+  const strideK = hunt ? 1.16 : srch ? 0.84 : 1;
+  const liftK   = hunt ? 1.18 : 1;
+
+  for (let i = 0; i < 2; i++) {
+    const side = i ? 1 : -1;
+    const b = i * 12;
+    let sp = 0, lf = 0;
+
+    if (walk) {
+      let u = ph + (i ? 0.5 : 0);
+      u -= Math.floor(u);
+      if (u < WK_DUTY) {
+        sp = 1 - 2 * (u / WK_DUTY);            // planted: slides backward
+      } else {
+        const s = (u - WK_DUTY) / (1 - WK_DUTY);
+        sp = -1 + 2 * (s * s * (3 - 2 * s));   // swing: snaps forward
+        lf = Math.sin(s * Math.PI) * liftK;    // and lifts clear
+      }
+    } else if (!dead) {
+      sp = Math.sin(t * 1.5 + i * Math.PI) * 0.10;   // planted idle breathing
+      if (srch && i === 1) {                          // right foot taps / tests
+        const tap = Math.sin(t * 2.6);
+        lf = tap > 0 ? tap * 0.55 : 0;
+        sp = 0.16 + lf * 0.55;
+      }
+      if (react) sp = i ? -0.34 : 0.20;               // coiled, weight back
+    }
+
+    let kx = -9.2 + sp * 2.4 * strideK + (hunt ? -1.6 : 0) + (react ? 1.0 : 0);
+    let ky = side * (18.5 + lf * 0.8 + (hunt ? 1.4 : 0) + (react ? 1.8 : 0));
+    let ax = -1.4 + sp * 10.6 * strideK + (hunt ? 1.4 : 0) + (react ? -1.4 : 0);
+    let ay = side * (14.8 + lf * 1.9 + sp * 0.9 + (hunt ? 0.6 : 0));
+    let fa = side * (0.16 + lf * 0.10);
+    let fs = 1 + lf * 0.12;
+
+    if (slump > 0) {                                  // hydraulics lose pressure
+      kx += (-2.4 - kx) * slump;
+      ky += (side * 21.0 - ky) * slump;
+      ax += (-8.8 - ax) * slump;
+      ay += (side * 12.4 - ay) * slump;
+      fa += (side * 0.95 - fa) * slump;
+      fs += (0.93 - fs) * slump;
+      lf *= 1 - slump;
+    }
+    if (dead) {
+      const w = i * 6;
+      kx = WK_WRECK[w];     ky = WK_WRECK[w + 1];
+      ax = WK_WRECK[w + 2]; ay = WK_WRECK[w + 3];
+      fa = WK_WRECK[w + 4]; fs = WK_WRECK[w + 5];
+      lf = 0; sp = 0;
+    }
+
+    const ca = Math.cos(fa), sa = Math.sin(fa);
+    WK_POSE[b]      = 1.8;                 WK_POSE[b + 1]  = side * 12.4;
+    WK_POSE[b + 2]  = kx;                  WK_POSE[b + 3]  = ky;
+    WK_POSE[b + 4]  = ax;                  WK_POSE[b + 5]  = ay;
+    WK_POSE[b + 6]  = ax + ca * 3.0;       WK_POSE[b + 7]  = ay + sa * 3.0;
+    WK_POSE[b + 8]  = fa;                  WK_POSE[b + 9]  = lf;
+    WK_POSE[b + 10] = fs;                  WK_POSE[b + 11] = sp;
+  }
+
+  const lift0 = WK_POSE[9], lift1 = WK_POSE[21];
+  const upLeg = lift0 > lift1 ? 0 : 1;                 // which foot is airborne
+  const upAmt = lift0 > lift1 ? lift0 : lift1;
+  const bobv  = walk ? Math.sin(ph * 2 * T2) : 0;      // twice per cycle
+  const sway  = walk ? (lift0 - lift1) * 1.5 : 0;      // toward the planted foot
+
+  /* ── frame: whole unit sags and tilts as it powers down ───────────── */
+  g.save();                                                       // + 1
+  g.rotate(slump * 0.12);                                         // + 1
+  g.translate(bobv * 0.55, sway + slump * 2.0);                   // + 1
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+
+  /* ── separate contact shadow under the airborne foot ──────────────── */
+  if (!dead && upAmt > 0.02) {
+    g.fillStyle = 'rgba(0,0,0,' + (0.30 * upAmt).toFixed(3) + ')';
+    const sb = upLeg * 12;
+    g.beginPath();                                                // + 1
+    g.ellipse(WK_POSE[sb + 6] + upAmt * 2.6, WK_POSE[sb + 7] + upAmt * 3.4,
+              5.6 + upAmt * 1.2, 3.9 + upAmt * 0.8, WK_POSE[sb + 8], 0, T2);
+    g.fill();                                                     // + 2
+  }
+
+  /* ── hydraulic rams: hull flank → 62 % along the thigh ────────────── */
+  g.strokeStyle = LIMB; g.lineWidth = 3.2;
+  g.beginPath();                                                  // + 1
+  for (let i = 0; i < 2; i++) {
+    const b = i * 12, side = i ? 1 : -1;
+    g.moveTo(-9.6, side * 7.4);
+    g.lineTo(WK_POSE[b + 2], WK_POSE[b + 3]);
+  }
+  g.stroke();                                                     // + 5
+  /* exposed piston shaft — visibly shorter as the ram compresses */
+  g.strokeStyle = dead ? 'rgba(140,140,140,0.16)'
+                       : 'rgba(' + acc + ',' + (0.14 + lit * 0.5).toFixed(3) + ')';
+  g.lineWidth = 1.25;
+  g.beginPath();                                                  // + 1
+  for (let i = 0; i < 2; i++) {
+    const b = i * 12, side = i ? 1 : -1;
+    const ex = WK_POSE[b + 2], ey = WK_POSE[b + 3];
+    g.moveTo(-9.6 + (ex + 9.6) * 0.46, side * 7.4 + (ey - side * 7.4) * 0.46);
+    g.lineTo(ex, ey);
+  }
+  g.stroke();                                                     // + 5
+
+  /* ── limb chain: thigh, then shank + pastern, then a machined rim ── */
+  g.strokeStyle = LIMB; g.lineWidth = 8.0;
+  g.beginPath();                                                  // + 1
+  for (let i = 0; i < 2; i++) {
+    const b = i * 12;
+    g.moveTo(WK_POSE[b], WK_POSE[b + 1]);
+    g.lineTo(WK_POSE[b + 2], WK_POSE[b + 3]);
+  }
+  g.stroke();                                                     // + 5
+
+  g.lineWidth = 5.8;
+  g.beginPath();                                                  // + 1
+  for (let i = 0; i < 2; i++) {
+    const b = i * 12;
+    g.moveTo(WK_POSE[b + 2], WK_POSE[b + 3]);
+    g.lineTo(WK_POSE[b + 4], WK_POSE[b + 5]);
+    g.lineTo(WK_POSE[b + 6], WK_POSE[b + 7]);
+  }
+  g.stroke();                                                     // + 7
+
+  g.strokeStyle = dead ? 'rgba(190,190,190,0.10)' : RIM;
+  g.lineWidth = 1.9;
+  g.beginPath();                                                  // + 1
+  for (let i = 0; i < 2; i++) {
+    const b = i * 12;
+    g.moveTo(WK_POSE[b], WK_POSE[b + 1]);
+    g.lineTo(WK_POSE[b + 2], WK_POSE[b + 3]);
+    g.lineTo(WK_POSE[b + 4], WK_POSE[b + 5]);
+  }
+  g.stroke();                                                     // + 7
+
+  if (upAmt > 0.06 && !dead) {          // airborne limb catches more light
+    const b = upLeg * 12;
+    g.strokeStyle = 'rgba(255,255,255,' + (0.16 + upAmt * 0.22).toFixed(3) + ')';
+    g.lineWidth = 1.1;
+    g.beginPath();                                                // + 1
+    g.moveTo(WK_POSE[b] - 1.2, WK_POSE[b + 1]);
+    g.lineTo(WK_POSE[b + 2] - 1.2, WK_POSE[b + 3]);
+    g.lineTo(WK_POSE[b + 4] - 0.8, WK_POSE[b + 5]);
+    g.stroke();                                                   // + 4
+  }
+
+  /* ── joint bosses: hip, knee, ankle ───────────────────────────────── */
+  g.fillStyle = dead ? (dk ? '#2a2a2a' : '#454545') : (dk ? '#4a4a4a' : '#7e7e7e');
+  g.beginPath();                                                  // + 1
+  for (let i = 0; i < 2; i++) {
+    const b = i * 12;
+    g.arc(WK_POSE[b], WK_POSE[b + 1], 3.0, 0, T2);
+    g.arc(WK_POSE[b + 2], WK_POSE[b + 3], 2.5, 0, T2);
+  }
+  g.fill();                                                       // + 5
+  g.fillStyle = dead ? M5 : 'rgba(' + acc + ',' + aTrim + ')';
+  g.beginPath();                                                  // + 1
+  for (let i = 0; i < 2; i++) {
+    const b = i * 12;
+    g.arc(WK_POSE[b + 2], WK_POSE[b + 3], 0.95, 0, T2);
+  }
+  g.fill();                                                       // + 3
+
+  /* ── three-toed foot pads (airborne one larger, paler rim) ────────── */
+  for (let i = 0; i < 2; i++) {
+    const b = i * 12;
+    const lf = WK_POSE[b + 9], sc = WK_POSE[b + 10];
+    const ca = Math.cos(WK_POSE[b + 8]) * sc, sa = Math.sin(WK_POSE[b + 8]) * sc;
+    const fx = WK_POSE[b + 6], fy = WK_POSE[b + 7];
+    g.fillStyle = lf > 0.08 ? (dk ? '#4e4e4e' : '#767676') : SOLE;
+    g.strokeStyle = lf > 0.08 ? (dk ? '#1b1b1b' : '#cfcfcf') : M4;
+    g.lineWidth = lf > 0.08 ? 1.0 : 0.8;
+    g.beginPath();                                                // + 1
+    for (let k = 0; k < WK_FOOT_N; k++) {
+      const px = WK_FOOT[k * 2], py = WK_FOOT[k * 2 + 1];
+      const X = fx + px * ca - py * sa, Y = fy + px * sa + py * ca;
+      if (k) g.lineTo(X, Y); else g.moveTo(X, Y);
+    }
+    g.closePath(); g.fill(); g.stroke();                          // + 12
+  }
+
+  /* ═══ upper body: bobs with the gait, leans with the mood ═════════ */
+  const hs = (walk ? 1 + bobv * 0.055 : 1) * (react ? 1.03 : hunt ? 0.985 : 1)
+                                           * (1 - slump * 0.05);
+  g.save();                                                       // + 1
+  g.translate(hunt ? 1.7 : react ? -2.0 : 0, 0);                  // + 1
+  g.scale(hs, hs);                                                // + 1
+
+  /* dark underframe peeking out beyond the armour */
+  g.fillStyle = M3;
+  g.fillRect(-12.2, -12.3, 19.6, 24.6);                           // + 1
+  g.fillRect(-17.4, -3.6, 32.2, 7.2);                             // + 1
+
+  /* mid plate — the main bright read */
+  const hg = g.createLinearGradient(-12, -10, 12, 10);            // + 1
+  hg.addColorStop(0, M0);
+  hg.addColorStop(0.46, M1);
+  hg.addColorStop(1, M2);
+  g.fillStyle = hg; g.strokeStyle = M4; g.lineWidth = 1.5;
+  wkPoly(g, WK_MID, 8); g.fill(); g.stroke();                     // + 12
+
+  /* armoured hip shrouds, overhanging the flank where the legs attach */
+  g.fillStyle = M2;
+  g.fillRect(-3.2, -13.6, 8.4, 3.6);                              // + 1
+  g.fillRect(-3.2, 10.0, 8.4, 3.6);                               // + 1
+
+  /* recessed top plate */
+  g.fillStyle = M2; g.strokeStyle = SEAM; g.lineWidth = 1.1;
+  wkPoly(g, WK_TOP, 8); g.fill(); g.stroke();                     // + 12
+
+  /* panel seams */
+  g.strokeStyle = SEAM; g.lineWidth = 0.9;
+  g.beginPath();                                                  // + 1
+  g.moveTo(-10.6, -4.1); g.lineTo(9.4, -4.1);
+  g.moveTo(-10.6, 4.1);  g.lineTo(9.4, 4.1);
+  g.stroke();                                                     // + 5
+
+  /* bolt heads around the top plate */
+  g.fillStyle = M4;
+  g.beginPath();                                                  // + 1
+  g.arc(-9.9, -5.2, 0.85, 0, T2); g.arc(-0.4, -7.2, 0.85, 0, T2);
+  g.arc(-0.4, 7.2, 0.85, 0, T2);  g.arc(-9.9, 5.2, 0.85, 0, T2);
+  g.fill();                                                       // + 5
+
+  /* flank intake grilles */
+  g.fillStyle = M4;
+  g.fillRect(-5.6, -12.0, 11.2, 3.6);                             // + 1
+  g.fillRect(-5.6, 8.4, 11.2, 3.6);                               // + 1
+  g.fillStyle = M5;
+  g.fillRect(-4.9, -11.4, 2.8, 2.4);                              // + 1
+  g.fillRect(-1.3, -11.5, 2.8, 2.4);                              // + 1
+  g.fillRect(2.3, -11.3, 2.8, 2.4);                               // + 1
+  g.fillRect(-4.9, 9.0, 2.8, 2.4);                                // + 1
+  g.fillRect(-1.3, 9.1, 2.8, 2.4);                                // + 1
+  g.fillRect(2.3, 8.9, 2.8, 2.4);                                 // + 1
+
+  /* rear exhaust stacks */
+  g.fillStyle = M2;
+  g.beginPath();                                                  // + 1
+  g.arc(-14.0, -5.2, 2.6, 0, T2); g.arc(-14.0, 5.2, 2.6, 0, T2);
+  g.fill();                                                       // + 3
+  g.fillStyle = M5;
+  g.beginPath();                                                  // + 1
+  g.arc(-14.0, -5.2, 1.7, 0, T2); g.arc(-14.0, 5.2, 1.7, 0, T2);
+  g.fill();                                                       // + 3
+  if (!dead) {
+    g.fillStyle = 'rgba(' + acc + ',' + (0.05 + lit * 0.42).toFixed(3) + ')';
+    g.beginPath();                                                // + 1
+    g.arc(-14.0, -5.2, 0.8, 0, T2); g.arc(-14.0, 5.2, 0.8, 0, T2);
+    g.fill();                                                     // + 3
+  }
+
+  /* specular sweep across the deck */
+  g.fillStyle = dk ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.20)';
+  g.beginPath();                                                  // + 1
+  g.ellipse(-3.6, -4.6, 6.6, 2.7, -0.22, 0, T2); g.fill();        // + 2
+
+  /* the unit's one calm-state accent: a status rail on the deck */
+  g.fillStyle = dead ? 'rgba(120,120,120,0.18)'
+                     : 'rgba(' + acc + ',' + (0.10 + lit * 0.6).toFixed(3) + ')';
+  g.fillRect(-6.0, -6.2, 7.4, 1.5);                               // + 1
+
+  if (dead) {                       /* split the top plate open */
+    g.strokeStyle = M5; g.lineWidth = 2.3;
+    g.beginPath();                                                // + 1
+    g.moveTo(-11.6, -5.6); g.lineTo(-2.6, -0.8); g.lineTo(2.4, -3.6);
+    g.lineTo(11.4, 5.8);
+    g.stroke();                                                   // + 5
+  }
+
+  /* ── dorsal radar dish on the rear deck ───────────────────────────── */
+  g.save();                                                       // + 1
+  g.translate(-7.6, 0);                                           // + 1
+  const dstep = 0.9 * slump;                    // coarser steps = spinning down
+  g.rotate(dead ? 0.95 : dstep > 0.02 ? Math.floor(cog / dstep) * dstep : cog);  // + 1
+  g.fillStyle = M5;
+  g.beginPath(); g.arc(0, 0, 3.2, 0, T2); g.fill();               // + 3
+  g.strokeStyle = M4; g.lineWidth = 2.2;
+  g.beginPath();                                                  // + 1
+  g.moveTo(-1.4, 0);  g.lineTo(4.6, dead ? 2.0 : 0);
+  g.moveTo(4.4, -2.4); g.lineTo(4.4, 2.4);
+  g.stroke();                                                     // + 5
+  g.fillStyle = dead ? M5 : 'rgba(' + acc + ',' + (0.12 + lit * 0.7).toFixed(3) + ')';
+  g.beginPath(); g.arc(5.4, dead ? 2.3 : 0, 1.15, 0, T2); g.fill(); // + 3
+  g.restore();                                                    // + 1
+
+  /* ── turret: searchlight housing, twin lenses, visor slit ─────────── */
+  g.fillStyle = M3;
+  g.beginPath(); g.arc(6.8, 0, 6.6, 0, T2); g.fill();             // + 3
+
+  let headA = o.headRel || 0;
+  if (srch) headA += Math.sin(t * 1.35) * 0.25;
+  if (react) headA += Math.sin(t * 21) * 0.035;
+  headA += slump * 0.62;                       // droops to the side, unpowered
+  const ext = hunt ? 3 : 0;
+
+  g.save();                                                       // + 1
+  g.translate(6.8, slump * 0.8);                                  // + 1
+  g.rotate(headA);                                                // + 1
+
+  g.fillStyle = M1; g.strokeStyle = M3; g.lineWidth = 1.4;
+  g.beginPath();                                                  // + 1
+  g.moveTo(-6.2, -5.2);
+  g.lineTo(1.8, -6.4);
+  g.lineTo(6.6 + ext, -5.0);
+  g.lineTo(6.6 + ext, 5.0);
+  g.lineTo(1.8, 6.4);
+  g.lineTo(-6.2, 5.2);
+  g.closePath(); g.fill(); g.stroke();                            // + 9
+
+  /* narrow visor slit above the lamps */
+  g.fillStyle = M5;
+  g.fillRect(-1.4 + ext * 0.5, -4.3, 2.3, 8.6);                   // + 1
+  g.fillStyle = dead ? 'rgba(110,110,110,0.20)'
+                     : 'rgba(' + acc + ',' + (0.06 + lit * 0.62).toFixed(3) + ')';
+  g.fillRect(-0.85 + ext * 0.5, -3.5, 1.2, 7.0);                  // + 1
+
+  /* lamp barrels */
+  g.fillStyle = M3;
+  g.beginPath();                                                  // + 1
+  g.arc(4.6 + ext, -3.0, 3.5, 0, T2); g.arc(4.6 + ext, 3.0, 3.5, 0, T2);
+  g.fill();                                                       // + 3
+
+  /* lenses */
+  g.fillStyle = dead ? 'rgba(38,38,38,0.92)'
+                     : 'rgba(' + acc + ',' + aLamp + ')';
+  g.beginPath();                                                  // + 1
+  g.arc(4.6 + ext, -3.0, 2.85, 0, T2); g.arc(4.6 + ext, 3.0, 2.85, 0, T2);
+  g.fill();                                                       // + 3
+  g.strokeStyle = dead ? 'rgba(150,150,150,0.24)'
+                       : 'rgba(245,245,245,' + (0.28 + lit * 0.45).toFixed(3) + ')';
+  g.lineWidth = 1.05;
+  g.beginPath();                                                  // + 1
+  g.moveTo(7.45 + ext, -3.0); g.arc(4.6 + ext, -3.0, 2.85, 0, T2);
+  g.moveTo(7.45 + ext, 3.0);  g.arc(4.6 + ext, 3.0, 2.85, 0, T2);
+  g.stroke();                                                     // + 5
+
+  if (dead) {
+    g.strokeStyle = 'rgba(225,225,225,0.42)'; g.lineWidth = 1.0;
+    g.beginPath();                                                // + 1
+    g.moveTo(2.6, -5.0); g.lineTo(6.7, -1.0);
+    g.moveTo(6.7, -5.0); g.lineTo(2.6, -1.0);
+    g.stroke();                                                   // + 5
+  } else {
+    g.fillStyle = 'rgba(255,255,255,0.34)';
+    g.beginPath();                                                // + 1
+    g.ellipse(3.6 + ext, -4.0, 1.1, 0.65, -0.5, 0, T2);
+    g.ellipse(3.6 + ext, 2.0, 1.1, 0.65, -0.5, 0, T2);
+    g.fill();                                                     // + 3
+    const rng = hunt ? 11 : react ? 7 : srch ? 5 : 3;
+    g.strokeStyle = 'rgba(' + acc + ',' + (0.05 + lit * (hunt ? 0.34 : 0.15)).toFixed(3) + ')';
+    g.lineWidth = hunt ? 1.7 : 1.1;
+    g.beginPath();                                                // + 1
+    g.moveTo(8.0 + ext, -3.0); g.lineTo(8.0 + ext + rng, -1.2);
+    g.moveTo(8.0 + ext, 3.0);  g.lineTo(8.0 + ext + rng, 1.2);
+    g.stroke();                                                   // + 5
+  }
+
+  if (hunt) {                     /* one halo, only while running you down */
+    const hl = g.createRadialGradient(11 + ext, 0, 0.5, 11 + ext, 0, 13);  // + 1
+    hl.addColorStop(0, 'rgba(' + acc + ',' + (0.28 * lit).toFixed(3) + ')');
+    hl.addColorStop(0.5, 'rgba(' + acc + ',' + (0.10 * lit).toFixed(3) + ')');
+    hl.addColorStop(1, 'rgba(' + acc + ',0)');
+    g.fillStyle = hl;
+    g.beginPath(); g.arc(11 + ext, 0, 13, 0, T2); g.fill();       // + 3
+  }
+  g.restore();                                                    // + 1
+
+  g.restore();                                                    // + 1  (upper body)
+
+  if (dead) {                     /* leaked fluid and a shed armour plate */
+    g.fillStyle = 'rgba(0,0,0,0.40)';
+    g.beginPath();                                                // + 1
+    g.ellipse(-6.0, 10.5, 11.5, 5.6, 0.30, 0, T2); g.fill();      // + 2
+    g.save();                                                     // + 1
+    g.translate(-13.5, 13.0);                                     // + 1
+    g.rotate(0.86);                                               // + 1
+    g.fillStyle = M2; g.strokeStyle = M4; g.lineWidth = 0.9;
+    wkPoly(g, WK_SHED, 4); g.fill(); g.stroke();                  // + 8
+    g.restore();                                                  // + 1
+  }
+
+  g.restore();                                                    // + 1
+}
+
+ROBOT_RENDERERS.walker = drawWalkerBody;
+
+/* ============================================================================
+ * RUN RUN ROBOTS — robot variant `hound`  ·  "COURSER"
+ * Low, long, four-legged pursuit unit. Top-down. Local +X = forward,
+ * local +Y = the unit's right-hand side. Collision radius 14.
+ *
+ * Silhouette: swept shoulder yoke -> narrow dark waist -> tapered haunch, three
+ * armour segments that shear against one another as it gallops; four
+ * digitigrade legs batched into two stroked paths; a narrow visor-band head on
+ * a visible neck; a whip tail antenna that lags the turn.
+ *
+ * Pure function. No allocation inside the draw call: the leg table and the
+ * solved pose live in module-level Float32Arrays. All helper/global names are
+ * HND_/hnd-prefixed so this file can be concatenated into index.html.
+ * ==========================================================================*/
+
+/* per leg: hipX hipY restX restY side phaseOff isFront kneeBiasX kneeBiasY () */
+const HND_LEGS = new Float32Array([
+   7.8, -3.8,   9.6, -5.8, -1, 0.00, 1, -0.86, -0.51, 0,   /* front left  */
+   7.8,  3.8,   9.6,  5.8,  1, 0.12, 1, -0.86,  0.51, 0,   /* front right */
+  -8.8, -3.8, -11.6, -6.2, -1, 0.50, 0,  0.88, -0.48, 0,   /* rear  left  */
+  -8.8,  3.8, -11.6,  6.2,  1, 0.62, 0,  0.88,  0.48, 0,   /* rear  right */
+]);
+/* solved pose, per leg: hipX hipY kneeX kneeY pawX pawY lift pawAngle () () */
+const HND_POSE = new Float32Array(40);
+
+function hndNum(v, d) { return (typeof v === 'number' && v === v && v !== Infinity && v !== -Infinity) ? v : d; }
+
+function drawHoundBody(g, rb, o) {
+  const T2 = Math.PI * 2;
+
+  /* ---- state ------------------------------------------------------------ */
+  const dead   = !!o.dead;
+  const hunt   = !dead && !!o.hunting;
+  const react  = !dead && !!o.reacting;
+  const search = !dead && !!o.searching;
+  const still  = dead || !!o.still;
+  const gait   = still ? 0 : 1;
+  let   lit    = hndNum(o.lit, 1); lit = dead ? 0 : lit < 0 ? 0 : lit > 1 ? 1 : lit;
+  const phase  = hndNum(o.phase, 0);
+  const time   = hndNum(o.time, 0);
+  const headRel = hndNum(o.headRel, 0);
+  let   slump  = hndNum(rb && rb.slumpT, 0);
+  slump = dead ? 0 : slump < 0 ? 0 : slump > 1 ? 1 : slump;
+  const dk  = o.tone === 'dark';
+  const acc = o.accent || '255,196,70';
+
+  /* ---- palette ---------------------------------------------------------- */
+  const M0 = dead ? '#8a8a8a' : dk ? '#8c8c8c' : '#e8e8e8';   /* highlight   */
+  const M1 = dead ? '#5a5a5a' : dk ? '#5c5c5c' : '#b0b0b0';   /* armour face */
+  const M2 = dead ? '#3c3c3c' : dk ? '#3d3d3d' : '#7a7a7a';   /* sub plate   */
+  const M3 = dead ? '#1a1a1a' : dk ? '#121212' : '#2a2a2a';   /* seam / void */
+  const legC  = dead ? '#2e2e2e' : dk ? '#2a2a2a' : '#4e4e4e';
+  const jntC  = dead ? '#454545' : dk ? '#484848' : '#7e7e7e';
+  const rodC  = dead ? 'rgba(140,140,140,0.14)' : dk ? 'rgba(200,200,200,0.22)' : 'rgba(255,255,255,0.24)';
+  const padLo = dead ? '#242424' : dk ? '#2c2c2c' : '#5a5a5a';
+  const padHi = dead ? '#343434' : dk ? '#606060' : '#9c9c9c';
+  const aLamp = 'rgba(' + acc + ',' + (0.10 + lit * 0.85).toFixed(3) + ')';
+  const aBand = dead || slump > 0.72 ? (dk ? '#141414' : '#1c1c1c')
+                                     : 'rgba(' + acc + ',' + (0.20 + lit * 0.75).toFixed(3) + ')';
+
+  /* ---- whole-body attitude ---------------------------------------------- */
+  /* Gallop = two ground beats per cycle: the chassis surges fore/aft while the
+     three armour segments shear laterally against each other (spine flex).   */
+  const surge = gait ? Math.sin(phase * T2 * 2) * 0.6 : 0;
+  const flexF = gait ? Math.sin(phase * T2 + 0.35) * 1.05 : react ? -0.9 : 0;
+  const flexR = -flexF * 0.9;
+  const lean  = dead ? 0.30 : hunt ? 0.05 : react ? -0.10 : slump * -0.14;
+  const stretch = dead ? 1 : hunt ? 1.10 : react ? 0.94 : 1 - slump * 0.07;
+  const squash  = dead ? 1 : hunt ? 0.93 : react ? 1.08 : 1 + slump * 0.10;
+
+  g.save();
+  g.rotate(lean);
+  g.translate(surge - slump * 1.8 + (dead ? -1.6 : 0), dead ? 1.4 : 0);
+  g.scale(stretch, squash);
+  g.lineCap = 'round'; g.lineJoin = 'round';
+
+  /* ======================================================================= *
+   *  LEG SOLVE — four digitigrade chains: hip -> knee -> paw.
+   *  Gallop: front pair and rear pair a half cycle apart, L/R 0.12 apart.
+   *  Stance sweeps the paw straight back; swing whips it forward, lifted.
+   *  Front knees break backward, rear hocks break forward (bias vectors).
+   * ======================================================================= */
+  const strideH = (hunt ? 18 : search ? 11 : 14) * 0.5;
+  const duty    = hunt ? 0.44 : 0.56;        /* less ground contact = faster */
+  const tap     = search ? Math.max(0, Math.sin(time * 5.2)) : 0;
+
+  for (let i = 0; i < 4; i++) {
+    const k = i * 10;
+    const hx = HND_LEGS[k], hy = HND_LEGS[k + 1];
+    const side = HND_LEGS[k + 4], poff = HND_LEGS[k + 5], front = HND_LEGS[k + 6];
+    const bx = HND_LEGS[k + 7], by = HND_LEGS[k + 8];
+    let fx = HND_LEGS[k + 2], fy = HND_LEGS[k + 3];
+    let lift = 0;
+
+    if (gait) {
+      let u = phase + poff; u -= Math.floor(u);
+      if (u < duty) {                                  /* planted: slides back */
+        fx += (1 - 2 * (u / duty)) * strideH;
+      } else {                                         /* airborne: whips fwd  */
+        const v = (u - duty) / (1 - duty);
+        lift = Math.sin(v * Math.PI);
+        fx += (-1 + 2 * v) * strideH;
+        fy -= side * lift * 2.0;                       /* tucks under the body */
+      }
+      if (hunt) { fx += front ? 1.4 : -1.2; fy += side * 0.8; }
+    } else {
+      if (front && side < 0) fx += 2.6;                /* one foreleg forward  */
+      if (react) { fx += front ? 2.6 : -2.2; fy += side * (front ? 2.8 : 0.9); }
+      if (search && front && side > 0) { lift = tap; fx += tap * 3.0; }
+    }
+
+    if (slump > 0) {                                   /* folds onto haunches  */
+      const fold = Math.min(1, slump * 1.35) * (front ? 0.45 : 1);
+      fx += ((hx + (front ? 4.4 : -1.2)) - fx) * fold;
+      fy += ((hy + side * (front ? 3.0 : 1.2)) - fy) * fold;
+    }
+    if (dead) {                                        /* stiff, splayed to -Y */
+      fx = hx + (front ? 3.0 : -2.4);
+      fy = hy - (side > 0 ? 12.8 : 8.4);
+      lift = 0;
+    }
+
+    /* clamped two-bone solve; the knee breaks out sideways and fore/aft */
+    let dx = fx - hx, dy = fy - hy;
+    let d = Math.sqrt(dx * dx + dy * dy);
+    if (!(d > 0.001)) { dx = 0.001; dy = 0; d = 0.001; }
+    const maxR = dead ? 15.5 : 13.6;
+    if (d > maxR) { const s = maxR / d; dx *= s; dy *= s; d = maxR; fx = hx + dx; fy = hy + dy; }
+    let bul = (3.2 - d * 0.12) * (dead ? 0.55 : 1) * (1 - lift * 0.18);
+    if (bul < 1.25) bul = 1.25;
+    const kx = hx + dx * 0.42 + bx * bul;
+    const ky = hy + dy * 0.42 + by * bul;
+
+    HND_POSE[k]     = hx; HND_POSE[k + 1] = hy;
+    HND_POSE[k + 2] = kx; HND_POSE[k + 3] = ky;
+    HND_POSE[k + 4] = fx; HND_POSE[k + 5] = fy;
+    HND_POSE[k + 6] = lift;
+    HND_POSE[k + 7] = Math.atan2(fy - ky, fx - kx);
+  }
+
+  /* ---- tail whip antenna (drawn first, the haunch overlaps its root) ----- */
+  const tSway = Math.sin(time * 2.2) * 0.20 + (gait ? Math.sin(phase * T2 + 0.9) * 0.30 : 0);
+  const tBend = -headRel * 0.25 + (dead ? 1.05 : tSway) + slump * 0.60;
+  const tLen  = dead ? 7.6 : 9.6 - slump * 2.6;
+  const tipX  = -12.4 - tLen * 0.94, tipY = tBend * 7.6;
+  g.strokeStyle = dead ? '#2c2c2c' : M2; g.lineWidth = 1.7;
+  g.beginPath();
+  g.moveTo(-11.0, 0);
+  g.quadraticCurveTo(-12.4 - tLen * 0.5, tBend * 1.2, tipX, tipY);
+  g.stroke();
+  g.fillStyle = dead ? '#2e2e2e' : aLamp;
+  g.beginPath(); g.arc(tipX, tipY, 1.1, 0, T2); g.fill();
+
+  /* ---- leg chains: thigh batch (thick) then shank batch (thin) ----------- */
+  g.strokeStyle = legC; g.lineWidth = 2.8;
+  g.beginPath();
+  for (let i = 0; i < 4; i++) {
+    const k = i * 10;
+    g.moveTo(HND_POSE[k], HND_POSE[k + 1]); g.lineTo(HND_POSE[k + 2], HND_POSE[k + 3]);
+  }
+  g.stroke();
+  g.lineWidth = 1.9;
+  g.beginPath();
+  for (let i = 0; i < 4; i++) {
+    const k = i * 10;
+    g.moveTo(HND_POSE[k + 2], HND_POSE[k + 3]); g.lineTo(HND_POSE[k + 4], HND_POSE[k + 5]);
+  }
+  g.stroke();
+
+  /* hydraulic rod highlight down each thigh — its visible run tracks the pose */
+  g.strokeStyle = rodC; g.lineWidth = 0.95;
+  g.beginPath();
+  for (let i = 0; i < 4; i++) {
+    const k = i * 10, hx = HND_POSE[k], hy = HND_POSE[k + 1];
+    const ux = HND_POSE[k + 2] - hx, uy = HND_POSE[k + 3] - hy;
+    g.moveTo(hx + ux * 0.30, hy + uy * 0.30); g.lineTo(hx + ux * 0.82, hy + uy * 0.82);
+  }
+  g.stroke();
+
+  /* knee bosses, one fill */
+  g.fillStyle = jntC;
+  g.beginPath();
+  for (let i = 0; i < 4; i++) {
+    const k = i * 10;
+    g.moveTo(HND_POSE[k + 2] + 1.3, HND_POSE[k + 3]);
+    g.arc(HND_POSE[k + 2], HND_POSE[k + 3], 1.3, 0, T2);
+  }
+  g.fill();
+
+  /* paws: two toes each. Planted paws dark, airborne paws paler and larger. */
+  for (let pass = 0; pass < 2; pass++) {
+    g.fillStyle = pass ? padHi : padLo;
+    g.beginPath();
+    for (let i = 0; i < 4; i++) {
+      const k = i * 10, lift = HND_POSE[k + 6];
+      if ((lift > 0.18) !== (pass === 1)) continue;
+      const fa = HND_POSE[k + 7], ca = Math.cos(fa), sa = Math.sin(fa);
+      const px = HND_POSE[k + 4] + ca * 0.45, py = HND_POSE[k + 5] + sa * 0.45;
+      const sc = 1 + lift * 0.24, rx = 1.06 * sc, ry = 0.7 * sc, off = 0.66;
+      g.moveTo(px - sa * off + rx, py + ca * off); g.ellipse(px - sa * off, py + ca * off, rx, ry, fa - 0.46, 0, T2);
+      g.moveTo(px + sa * off + rx, py - ca * off); g.ellipse(px + sa * off, py - ca * off, rx, ry, fa + 0.46, 0, T2);
+    }
+    g.fill();
+  }
+
+  /* ======================================================================= *
+   *  CHASSIS — shoulder yoke / dark waist / haunch, shearing as it runs.
+   * ======================================================================= */
+  const yx = surge * 0.5, yy = flexF;             /* shoulder yoke offset     */
+  const hxo = -surge * 0.35, hyo = flexR;         /* haunch plate offset      */
+
+  /* haunch plate, tapering hard to a docked tail root */
+  g.fillStyle = M1; g.strokeStyle = M3; g.lineWidth = 1.25;
+  g.beginPath();
+  g.moveTo(-1.0 + hxo, -5.2 + hyo);
+  g.lineTo(-7.8 + hxo, -4.9 + hyo);
+  g.lineTo(-13.2 + hxo, -1.7 + hyo);
+  g.lineTo(-13.2 + hxo, 1.7 + hyo);
+  g.lineTo(-7.8 + hxo, 4.9 + hyo);
+  g.lineTo(-1.0 + hxo, 5.2 + hyo);
+  g.closePath(); g.fill(); g.stroke();
+
+  /* rear-swept chevron sub-plate over the hip block */
+  g.fillStyle = M2;
+  g.beginPath();
+  g.moveTo(-2.0 + hxo, -4.0 + hyo); g.lineTo(-5.4 + hxo, hyo); g.lineTo(-2.0 + hxo, 4.0 + hyo);
+  g.closePath(); g.fill();
+
+  /* dark waist: the flex gap the two big plates shear across */
+  g.fillStyle = M3;
+  g.beginPath();
+  g.moveTo(3.2, -3.9 + flexF * 0.2); g.lineTo(-2.4, -3.7 + flexR * 0.2);
+  g.lineTo(-2.4, 3.7 + flexR * 0.2); g.lineTo(3.2, 3.9 + flexF * 0.2);
+  g.closePath(); g.fill();
+
+  /* shoulder yoke, swept back from the neck */
+  g.fillStyle = M1; g.strokeStyle = M3; g.lineWidth = 1.25;
+  g.beginPath();
+  g.moveTo(10.6 + yx, -1.8 + yy);
+  g.lineTo(6.4 + yx, -5.1 + yy);
+  g.lineTo(1.0 + yx, -4.6 + yy);
+  g.lineTo(1.0 + yx, 4.6 + yy);
+  g.lineTo(6.4 + yx, 5.1 + yy);
+  g.lineTo(10.6 + yx, 1.8 + yy);
+  g.closePath(); g.fill(); g.stroke();
+
+  /* pale highlight along the yoke shoulder */
+  g.fillStyle = M0; g.globalAlpha = dead ? 0.14 : 0.36;
+  g.beginPath();
+  g.moveTo(5.6 + yx + 3.5, -2.4 + yy);
+  g.ellipse(5.6 + yx, -2.4 + yy, 3.5, 1.4, -0.16, 0, T2);
+  g.fill(); g.globalAlpha = 1;
+
+  /* spine ridge + three flank vent slits per side (one stroked batch).
+     On the wreck the ridge becomes a jagged split down the back.            */
+  g.strokeStyle = dead ? 'rgba(196,196,196,0.32)' : 'rgba(0,0,0,0.34)'; g.lineWidth = 1;
+  g.beginPath();
+  if (dead) {
+    g.moveTo(8.4, -0.6); g.lineTo(2.6, 1.5); g.lineTo(-2.6, -1.3); g.lineTo(-9.2, 1.1);
+  } else {
+    g.moveTo(9.2 + yx, yy * 0.7); g.lineTo(-11.2 + hxo, hyo * 0.7);
+  }
+  for (let s = -1; s <= 1; s += 2) {   /* three parallel louvres each flank */
+    g.moveTo(-5.6 + hxo, s * 4.4 + hyo); g.lineTo(-7.0 + hxo, s * 3.2 + hyo);
+    g.moveTo(-7.8 + hxo, s * 4.0 + hyo); g.lineTo(-9.2 + hxo, s * 2.8 + hyo);
+    g.moveTo(-10.0 + hxo, s * 3.2 + hyo); g.lineTo(-11.4 + hxo, s * 2.0 + hyo);
+  }
+  g.stroke();
+
+  /* energised core strips: one on the yoke, one on the haunch */
+  g.fillStyle = dead ? 'rgba(44,44,44,0.7)' : 'rgba(' + acc + ',' + (0.10 + lit * 0.62).toFixed(3) + ')';
+  g.fillRect(2.6 + yx, -0.9 + yy, 5.6, 1.8);
+  g.fillRect(-9.6 + hxo, -0.7 + hyo, 4.4, 1.4);
+
+  /* neck: short dark segment so the head visibly articulates on top of it */
+  g.fillStyle = M3;
+  g.beginPath();
+  g.moveTo(10.4 + 2.3, 0); g.ellipse(10.4, 0, 2.3, 2.7, 0, 0, T2); g.fill();
+
+  /* ======================================================================= *
+   *  HEAD — narrow wedge, one wide visor band, two ear antennae.
+   * ======================================================================= */
+  g.save();
+  g.translate(11.4 + (hunt ? 1.2 : 0) - slump * 3.6 + (dead ? -1.8 : 0), dead ? 2.6 : 0);
+  g.rotate(headRel + (search ? Math.sin(time * 2.3) * 0.5 : 0) + (dead ? 0.66 : 0));
+  const hs = react ? 1.08 : dead ? 0.94 : 1 - slump * 0.26;
+  g.scale(hs, hs);
+
+  /* hunt: one radial bloom thrown ahead of the visor (the frame's 1 gradient) */
+  if (hunt) {
+    const bloom = g.createRadialGradient(6.0, 0, 0.6, 9.0, 0, 8.4);
+    bloom.addColorStop(0, 'rgba(' + acc + ',' + (0.32 * lit).toFixed(3) + ')');
+    bloom.addColorStop(1, 'rgba(' + acc + ',0)');
+    g.fillStyle = bloom;
+    g.beginPath(); g.arc(9.0, 0, 8.4, 0, T2); g.fill();
+  }
+
+  /* ear antennae */
+  g.strokeStyle = M2; g.lineWidth = 1.05;
+  g.beginPath();
+  g.moveTo(-1.2, -1.7); g.lineTo(-2.8, -3.9);
+  g.moveTo(-1.2, 1.7); g.lineTo(-2.8, 3.9);
+  g.stroke();
+
+  /* skull wedge — darker than the yoke so the head reads as its own part */
+  g.fillStyle = M2; g.strokeStyle = M3; g.lineWidth = 1.05;
+  g.beginPath();
+  g.moveTo(7.0, 0); g.lineTo(3.4, -1.95); g.lineTo(-2.7, -1.85);
+  g.lineTo(-2.7, 1.85); g.lineTo(3.4, 1.95);
+  g.closePath(); g.fill(); g.stroke();
+
+  /* visor band across the face + the two ear-tip pips, one fill */
+  const bw = hunt ? 1.26 : react ? 1.14 : 1;
+  g.fillStyle = aBand;
+  g.beginPath();
+  g.moveTo(4.7, -1.66 * bw); g.lineTo(2.5, -1.92 * bw);
+  g.lineTo(2.5, 1.92 * bw); g.lineTo(4.7, 1.66 * bw);
+  g.closePath();
+  g.moveTo(-2.8 + 0.7, -3.9); g.arc(-2.8, -3.9, 0.7, 0, T2);
+  g.moveTo(-2.8 + 0.7, 3.9); g.arc(-2.8, 3.9, 0.7, 0, T2);
+  g.fill();
+
+  if (dead) {                                     /* cracked optic */
+    g.strokeStyle = 'rgba(210,210,210,0.5)'; g.lineWidth = 0.85;
+    g.beginPath();
+    g.moveTo(2.5, -1.4); g.lineTo(4.7, 1.2);
+    g.moveTo(4.6, -1.3); g.lineTo(2.8, 1.6);
+    g.stroke();
+  }
+  g.restore();
+
+  if (dead) {                                     /* scorched breach in the flank */
+    g.fillStyle = 'rgba(0,0,0,0.55)';
+    g.beginPath(); g.moveTo(-4.0 + 3.8, 1.4); g.ellipse(-4.0, 1.4, 3.8, 2.2, 0.24, 0, T2); g.fill();
+  }
+
+  g.restore();
+}
+ROBOT_RENDERERS.hound = drawHoundBody;
+
+/* ═══ SESSION 10 — finale art: tracks, rolling stock, gantry, road, substation ═══ */
+/* ── track: rails + sleepers, painted under the wall slabs ─────────────── */
+function drawTrackDeco(g, d, t, S) {
+  const x1 = d.x1, x2 = d.x2, y = d.y;
+  g.save();
+  g.fillStyle = 'rgba(0,0,0,0.22)'; g.fillRect(x1, y - 18, x2 - x1, 36);
+  g.fillStyle = '#2a2520';
+  for (let x = x1 + 6; x < x2 - 6; x += 18) g.fillRect(x, y - 14, 8, 28);
+  g.strokeStyle = 'rgba(' + S.line + ',0.34)'; g.lineWidth = 2.6;
+  g.beginPath(); g.moveTo(x1, y - 7); g.lineTo(x2, y - 7); g.moveTo(x1, y + 7); g.lineTo(x2, y + 7); g.stroke();
+  g.strokeStyle = 'rgba(' + S.line + ',0.12)'; g.lineWidth = 1;
+  g.beginPath(); g.moveTo(x1, y - 9.5); g.lineTo(x2, y - 9.5); g.moveTo(x1, y + 4.5); g.lineTo(x2, y + 4.5); g.stroke();
+  g.restore();
+}
+
+/* ── railcar: rolling stock composited over its collision slab ─────────── */
+function drawRailcarDeco(g, d, t, S) {
+  const line = a => 'rgba(' + S.line + ',' + a + ')';
+  const accent = a => 'rgba(' + S.accent + ',' + a + ')';
+  const x = d.x, y = d.y, w = d.w, h = d.h, cx = x + w / 2, cy = y + h / 2;
+  const T2 = Math.PI * 2;
+  g.save();
+  const bogies = () => {
+    g.fillStyle = '#0f1116';
+    for (const bx of [x + 30, x + w - 30]) {
+      g.fillRect(bx - 16, y + 6, 32, 8); g.fillRect(bx - 16, y + h - 14, 32, 8);
+      g.beginPath();
+      for (const wx of [bx - 9, bx + 9]) { g.moveTo(wx + 5, y + 10); g.arc(wx, y + 10, 5, 0, T2); g.moveTo(wx + 5, y + h - 10); g.arc(wx, y + h - 10, 5, 0, T2); }
+      g.fill();
+    }
+  };
+  if (d.kind === 'boxcar') {
+    const tones = { rust:['#5a3b2e','#7d5443','#3b2419'], slate:['#3f4a57','#5f6d7d','#283039'], olive:['#454b35','#646c4c','#2b3020'] };
+    const c = tones[d.tone] || tones.slate;
+    bogies();
+    g.fillStyle = c[0]; g.fillRect(x + 8, y + 12, w - 16, h - 24);
+    g.fillStyle = c[1]; g.fillRect(x + 8, y + 12, w - 16, 10);
+    g.fillStyle = c[2]; g.fillRect(x + 8, y + h - 22, w - 16, 10);
+    g.strokeStyle = 'rgba(0,0,0,0.40)'; g.lineWidth = 2;
+    g.beginPath();
+    for (let rx = x + 24; rx < x + w - 12; rx += 16) { g.moveTo(rx, y + 14); g.lineTo(rx, y + h - 14); }
+    g.stroke();
+    g.fillStyle = 'rgba(0,0,0,0.42)'; g.fillRect(cx - 22, y + 18, 44, h - 36);
+    g.strokeStyle = line(0.30); g.lineWidth = 1.5; g.strokeRect(cx - 22, y + 18, 44, h - 36);
+    g.fillStyle = line(0.16); g.fillRect(cx - 2, y + 20, 4, h - 40);
+    g.strokeStyle = line(0.32); g.lineWidth = 2; g.strokeRect(x + 9, y + 13, w - 18, h - 26);
+    g.fillStyle = line(0.26); g.font = '700 11px ui-monospace, Menlo, monospace'; g.textAlign = 'center';
+    g.fillText((d.tone === 'rust' ? 'RRR ' : 'YARD ') + Math.round(x / 7) % 900, x + w * 0.25, cy + 4);
+  } else if (d.kind === 'tanker') {
+    bogies();
+    g.fillStyle = '#14161c'; g.fillRect(x + 10, y + 16, w - 20, h - 32);
+    const gr = g.createLinearGradient(0, y + 14, 0, y + h - 14);
+    gr.addColorStop(0, '#9aa3ae'); gr.addColorStop(0.35, '#e2e8ee'); gr.addColorStop(0.7, '#6d7680'); gr.addColorStop(1, '#2a2f37');
+    g.fillStyle = gr;
+    g.beginPath(); g.moveTo(x + 24, y + 14); g.lineTo(x + w - 24, y + 14);
+    g.quadraticCurveTo(x + w - 6, y + 14, x + w - 6, cy); g.quadraticCurveTo(x + w - 6, y + h - 14, x + w - 24, y + h - 14);
+    g.lineTo(x + 24, y + h - 14); g.quadraticCurveTo(x + 6, y + h - 14, x + 6, cy); g.quadraticCurveTo(x + 6, y + 14, x + 24, y + 14);
+    g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(0,0,0,0.45)'; g.lineWidth = 3;
+    g.beginPath();
+    for (const bx of [x + w * 0.3, x + w * 0.7]) { g.moveTo(bx, y + 14); g.lineTo(bx, y + h - 14); }
+    g.stroke();
+    g.fillStyle = '#3a3f48'; g.beginPath(); g.arc(cx, cy, 9, 0, T2); g.fill();
+    g.strokeStyle = line(0.4); g.lineWidth = 1.5; g.stroke();
+    g.fillStyle = accent(0.55); g.fillRect(cx - 3, cy - 3, 6, 6);
+    g.fillStyle = 'rgba(0,0,0,0.5)'; g.fillRect(x + 18, cy - 4, 22, 8); g.fillRect(x + w - 40, cy - 4, 22, 8);
+  } else if (d.kind === 'flatcar') {
+    bogies();
+    g.fillStyle = '#3a3226'; g.fillRect(x + 8, y + 16, w - 16, h - 32);
+    g.strokeStyle = 'rgba(0,0,0,0.35)'; g.lineWidth = 1.5;
+    g.beginPath();
+    for (let px = x + 16; px < x + w - 8; px += 12) { g.moveTo(px, y + 17); g.lineTo(px, y + h - 17); }
+    g.stroke();
+    g.strokeStyle = line(0.28); g.lineWidth = 2; g.strokeRect(x + 9, y + 17, w - 18, h - 34);
+    for (let i = 0; i < 2; i++) {
+      const bx = x + w * (0.3 + i * 0.4), bw = 42, bh = 30;
+      g.fillStyle = '#4a4a4a'; g.fillRect(bx - bw / 2, cy - bh / 2, bw, bh);
+      g.strokeStyle = line(0.4); g.lineWidth = 1.5; g.strokeRect(bx - bw / 2, cy - bh / 2, bw, bh);
+      g.strokeStyle = 'rgba(0,0,0,0.5)'; g.beginPath(); g.moveTo(bx - bw / 2, cy - bh / 2); g.lineTo(bx + bw / 2, cy + bh / 2);
+      g.moveTo(bx + bw / 2, cy - bh / 2); g.lineTo(bx - bw / 2, cy + bh / 2); g.stroke();
+    }
+    g.strokeStyle = accent(0.45); g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(x + 14, y + 20); g.lineTo(x + w - 14, y + h - 20); g.moveTo(x + 14, y + h - 20); g.lineTo(x + w - 14, y + 20); g.stroke();
+  } else if (d.kind === 'loco') {
+    bogies();
+    g.fillStyle = '#23262c'; g.fillRect(x + 6, y + 12, w - 12, h - 24);
+    g.fillStyle = '#3b4452'; g.fillRect(x + 10, y + 14, w * 0.6, h - 28);
+    g.fillStyle = '#6a7484'; g.fillRect(x + 10, y + 14, w * 0.6, 9);
+    g.fillStyle = '#2a3038'; g.fillRect(x + 10 + w * 0.6, y + 16, w * 0.34, h - 32);
+    g.strokeStyle = line(0.4); g.lineWidth = 2; g.strokeRect(x + 11, y + 15, w * 0.6 - 2, h - 30);
+    g.strokeStyle = line(0.3); g.strokeRect(x + 11 + w * 0.6, y + 17, w * 0.34 - 2, h - 34);
+    g.fillStyle = 'rgba(0,0,0,0.5)';
+    for (let i = 0; i < 4; i++) { g.beginPath(); g.arc(x + 34 + i * 30, cy, 7, 0, T2); g.fill(); }
+    g.strokeStyle = line(0.35); g.lineWidth = 1.2;
+    for (let i = 0; i < 4; i++) { g.beginPath(); g.arc(x + 34 + i * 30, cy, 7, 0, T2); g.stroke(); }
+    g.fillStyle = 'rgba(0,0,0,0.45)'; g.fillRect(x + w * 0.66, y + 22, 26, 16); g.fillRect(x + w * 0.66, y + h - 38, 26, 16);
+    g.fillStyle = accent(0.20); g.fillRect(x + w - 12, y + 20, 5, 12); g.fillRect(x + w - 12, y + h - 32, 5, 12);
+    g.fillStyle = accent(0.85); g.beginPath(); g.arc(x + w - 9, cy, 4, 0, T2); g.fill();
+    const hl = g.createRadialGradient(x + w - 6, cy, 2, x + w - 6, cy, 60);
+    hl.addColorStop(0, accent(0.30)); hl.addColorStop(1, accent(0));
+    g.fillStyle = hl; g.beginPath(); g.moveTo(x + w - 6, cy); g.lineTo(x + w + 60, cy - 26); g.lineTo(x + w + 60, cy + 26); g.closePath(); g.fill();
+    g.fillStyle = line(0.30); g.font = '700 12px ui-monospace, Menlo, monospace'; g.textAlign = 'center';
+    g.fillText('R-07', x + w * 0.3, cy + 4);
+  } else if (d.kind === 'bumper') {
+    g.fillStyle = '#2b2b2b'; g.fillRect(x + 4, y + 8, w - 8, h - 16);
+    g.fillStyle = '#101010'; g.fillRect(x + 4, y + 18, 10, h - 36);
+    g.strokeStyle = line(0.4); g.lineWidth = 2; g.strokeRect(x + 5, y + 9, w - 10, h - 18);
+    g.fillStyle = accent(0.6); g.fillRect(x + 16, y + 12, w - 22, 6); g.fillRect(x + 16, y + h - 18, w - 22, 6);
+  } else if (d.kind === 'dock') {
+    g.fillStyle = '#2c3038'; g.fillRect(x + 2, y + 2, w - 4, h - 4);
+    g.strokeStyle = line(0.3); g.lineWidth = 2; g.strokeRect(x + 5, y + 5, w - 10, h - 10);
+    g.fillStyle = '#4b4136'; g.fillRect(x + 12, y + 12, 28, 28); g.fillRect(x + 48, y + 30, 28, 28); g.fillRect(x + 14, y + 50, 24, 24);
+    g.strokeStyle = line(0.35); g.lineWidth = 1.2; g.strokeRect(x + 12, y + 12, 28, 28); g.strokeRect(x + 48, y + 30, 28, 28); g.strokeRect(x + 14, y + 50, 24, 24);
+    g.fillStyle = accent(0.5); g.fillRect(x + 50, y + 10, 26, 8);
+  } else if (d.kind === 'hut') {
+    g.fillStyle = '#20242c'; g.fillRect(x, y, w, h);
+    g.strokeStyle = line(0.35); g.lineWidth = 2; g.strokeRect(x + 2, y + 2, w - 4, h - 4);
+    g.fillStyle = accent(0.35); g.fillRect(x + 14, y + 10, 22, 14); g.fillRect(x + w - 36, y + 10, 22, 14);
+    g.fillStyle = line(0.45); g.font = '700 11px ui-monospace, monospace'; g.textAlign = 'center'; g.fillText('SIG-4', cx, y + h - 10);
+  }
+  g.restore();
+}
+
+/* ── gantry: a loading bridge over two tracks with a travelling trolley ── */
+function drawGantryDeco(g, d, t, S) {
+  const line = a => 'rgba(' + S.line + ',' + a + ')';
+  const accent = a => 'rgba(' + S.accent + ',' + a + ')';
+  const x = d.x, y1 = d.y1, y2 = d.y2, span = y2 - y1;
+  const tr = y1 + 30 + (span - 60) * (0.5 + 0.5 * Math.sin(t * 0.35 + 1.2));
+  g.save();
+  g.fillStyle = 'rgba(0,0,0,0.30)'; g.fillRect(x - 9, y1 - 22, 18, span + 44);
+  g.fillStyle = '#262b36'; g.fillRect(x - 6, y1 - 20, 12, span + 40);
+  g.strokeStyle = line(0.26); g.lineWidth = 1.2;
+  g.beginPath();
+  for (let yy = y1 - 12; yy < y2 + 12; yy += 14) { g.moveTo(x - 6, yy); g.lineTo(x + 6, yy + 10); }
+  g.moveTo(x - 6.5, y1 - 20); g.lineTo(x - 6.5, y2 + 20); g.moveTo(x + 6.5, y1 - 20); g.lineTo(x + 6.5, y2 + 20);
+  g.stroke();
+  for (const ly of [y1, y2]) {
+    g.fillStyle = '#3a4150'; g.fillRect(x - 20, ly - 20, 40, 40);
+    g.strokeStyle = line(0.4); g.lineWidth = 1.5; g.strokeRect(x - 18, ly - 18, 36, 36);
+    g.strokeStyle = 'rgba(0,0,0,0.5)'; g.beginPath(); g.moveTo(x - 18, ly - 18); g.lineTo(x + 18, ly + 18); g.moveTo(x + 18, ly - 18); g.lineTo(x - 18, ly + 18); g.stroke();
+  }
+  g.fillStyle = '#4a5264'; g.fillRect(x - 14, tr - 11, 28, 22);
+  g.strokeStyle = line(0.45); g.lineWidth = 1.5; g.strokeRect(x - 13, tr - 10, 26, 20);
+  g.strokeStyle = 'rgba(0,0,0,0.6)'; g.lineWidth = 1.5;
+  g.beginPath(); g.moveTo(x - 4, tr + 11); g.lineTo(x - 4, tr + 26); g.moveTo(x + 4, tr + 11); g.lineTo(x + 4, tr + 26); g.stroke();
+  g.fillStyle = '#1b1e25'; g.fillRect(x - 8, tr + 26, 16, 7);
+  g.fillStyle = accent(0.7 + 0.3 * Math.sin(t * 5)); g.fillRect(x - 2, tr - 2, 4, 4);
+  g.restore();
+}
+
+/* ── road: the asphalt strip out of the complex ───────────────────────── */
+function drawRoadDeco(g, d, t, S) {
+  const line = a => 'rgba(' + S.line + ',' + a + ')';
+  const x1 = d.x1, x2 = d.x2, y = d.y, h = d.h || 88;
+  g.save();
+  g.fillStyle = 'rgba(0,0,0,0.28)'; g.fillRect(x1, y - h / 2, x2 - x1, h);
+  g.strokeStyle = line(0.30); g.lineWidth = 2.2;
+  g.beginPath(); g.moveTo(x1, y - h / 2 + 6); g.lineTo(x2, y - h / 2 + 6); g.moveTo(x1, y + h / 2 - 6); g.lineTo(x2, y + h / 2 - 6); g.stroke();
+  g.strokeStyle = 'rgba(' + S.accent + ',0.42)'; g.lineWidth = 3; g.setLineDash([26, 22]);
+  g.beginPath(); g.moveTo(x1 + 10, y); g.lineTo(x2, y); g.stroke(); g.setLineDash([]);
+  g.fillStyle = line(0.18);
+  for (let ax = x2 - 220; ax < x2 - 60; ax += 70) {
+    g.beginPath(); g.moveTo(ax, y - 14); g.lineTo(ax + 26, y); g.lineTo(ax, y + 14); g.lineTo(ax + 8, y); g.closePath(); g.fill();
+  }
+  g.restore();
+}
+
+/* ── substation: transformers, bunker, tanks, control house, shed ──────── */
+function drawSubstationDeco(g, d, t, S) {
+  const line = a => 'rgba(' + S.line + ',' + a + ')';
+  const accent = a => 'rgba(' + S.accent + ',' + a + ')';
+  const x = d.x, y = d.y, w = d.w, h = d.h, cx = x + w / 2, cy = y + h / 2;
+  const T2 = Math.PI * 2;
+  g.save();
+  if (d.kind === 'transformer') {
+    g.fillStyle = '#3a3142'; g.fillRect(x + 5, y + 5, w - 10, h - 10);
+    g.strokeStyle = line(0.32); g.lineWidth = 2; g.strokeRect(x + 6, y + 6, w - 12, h - 12);
+    g.strokeStyle = 'rgba(0,0,0,0.55)'; g.lineWidth = 3;
+    g.beginPath();
+    for (let fy = y + 14; fy <= y + h - 14; fy += 8) { g.moveTo(x + 10, fy); g.lineTo(x + 30, fy); g.moveTo(x + w - 30, fy); g.lineTo(x + w - 10, fy); }
+    g.stroke();
+    g.fillStyle = '#2a2330'; g.fillRect(cx - 12, y + 12, 24, h - 24);
+    g.strokeStyle = line(0.22); g.lineWidth = 1; g.strokeRect(cx - 12, y + 12, 24, h - 24);
+    for (let i = 0; i < 3; i++) {
+      const by = y + 24 + i * 20;
+      g.fillStyle = '#c9c2b8'; g.beginPath(); g.arc(cx, by, 5.5, 0, T2); g.fill();
+      g.strokeStyle = 'rgba(0,0,0,0.5)'; g.lineWidth = 1.4; g.stroke();
+      g.fillStyle = accent(0.8); g.beginPath(); g.arc(cx, by, 2, 0, T2); g.fill();
+    }
+    g.fillStyle = line(0.22); g.font = '700 9px ui-monospace, monospace'; g.textAlign = 'center';
+    g.fillText('T' + (Math.round(x / 220) + 1), cx, y + h - 8);
+  } else if (d.kind === 'bunker') {
+    g.fillStyle = '#3e3548'; g.fillRect(x + 4, y + 4, w - 8, h - 8);
+    g.strokeStyle = line(0.3); g.lineWidth = 2; g.strokeRect(x + 7, y + 7, w - 14, h - 14);
+    g.fillStyle = '#241d2c'; g.fillRect(cx - 30, y + h - 30, 60, 22);
+    g.strokeStyle = line(0.3); g.lineWidth = 1.2; g.strokeRect(cx - 30, y + h - 30, 60, 22);
+    g.fillStyle = accent(0.5); g.fillRect(cx - 26, y + h - 26, 10, 6); g.fillRect(cx + 16, y + h - 26, 10, 6);
+    g.strokeStyle = line(0.45); g.lineWidth = 2;
+    g.beginPath(); g.moveTo(cx + 50, y + 18); g.lineTo(cx + 50, y + 60); g.moveTo(cx + 40, y + 26); g.lineTo(cx + 60, y + 26); g.moveTo(cx + 43, y + 34); g.lineTo(cx + 57, y + 34); g.stroke();
+    g.fillStyle = accent(0.75); g.beginPath(); g.arc(cx + 50, y + 16, 2.6, 0, T2); g.fill();
+    g.fillStyle = line(0.35); g.font = '700 12px ui-monospace, monospace'; g.textAlign = 'center';
+    g.fillText('GRID CTRL', cx - 18, y + 40); g.fillText('SS-1', cx - 18, y + 56);
+  } else if (d.kind === 'sill') {
+    g.fillStyle = '#352c3e'; g.fillRect(x + 2, y + 2, w - 4, h - 4);
+    g.strokeStyle = line(0.28); g.lineWidth = 2; g.strokeRect(x + 4, y + 4, w - 8, h - 8);
+    g.strokeStyle = 'rgba(0,0,0,0.5)'; g.lineWidth = 2;
+    g.beginPath();
+    for (let px = x + 16; px < x + w - 8; px += 16) { g.moveTo(px, y + 8); g.lineTo(px, y + h - 8); }
+    g.stroke();
+  } else if (d.kind === 'tanks') {
+    g.fillStyle = '#2a2330'; g.fillRect(x + 3, y + 3, w - 6, h - 6);
+    for (const [tx, ty] of [[cx - 20, cy - 20], [cx + 20, cy - 20], [cx - 20, cy + 20], [cx + 20, cy + 20]]) {
+      const gr = g.createRadialGradient(tx - 5, ty - 5, 2, tx, ty, 18);
+      gr.addColorStop(0, '#8c8494'); gr.addColorStop(1, '#2c2634');
+      g.fillStyle = gr; g.beginPath(); g.arc(tx, ty, 17, 0, T2); g.fill();
+      g.strokeStyle = line(0.35); g.lineWidth = 1.4; g.stroke();
+      g.strokeStyle = 'rgba(0,0,0,0.45)'; g.beginPath(); g.arc(tx, ty, 9, 0, T2); g.stroke();
+    }
+  } else if (d.kind === 'house') {
+    g.fillStyle = '#433a4c'; g.fillRect(x + 3, y + 3, w - 6, h - 6);
+    g.strokeStyle = line(0.34); g.lineWidth = 2; g.strokeRect(x + 6, y + 6, w - 12, h - 12);
+    g.fillStyle = accent(0.32); g.fillRect(x + 16, y + 14, 26, 16); g.fillRect(x + w - 42, y + 14, 26, 16);
+    g.fillStyle = '#1c1622'; g.fillRect(cx - 12, y + h - 24, 24, 18);
+    g.strokeStyle = line(0.3); g.lineWidth = 1.2; g.strokeRect(cx - 12, y + h - 24, 24, 18);
+    g.fillStyle = line(0.45); g.font = '700 11px ui-monospace, monospace'; g.textAlign = 'center';
+    g.fillText('CTRL', cx, cy + 4);
+  } else if (d.kind === 'shed') {
+    g.fillStyle = '#3a3342'; g.fillRect(x + 3, y + 3, w - 6, h - 6);
+    g.strokeStyle = line(0.3); g.lineWidth = 2; g.strokeRect(x + 6, y + 6, w - 12, h - 12);
+    g.strokeStyle = 'rgba(0,0,0,0.45)'; g.lineWidth = 2;
+    g.beginPath();
+    for (let px = x + 18; px < x + w - 8; px += 14) { g.moveTo(px, y + 8); g.lineTo(px, y + h - 8); }
+    g.stroke();
+    g.fillStyle = accent(0.4); g.fillRect(x + 10, cy - 4, 18, 8);
+  }
+  g.restore();
+}
+
+/* ── busbar: overhead conductor runs with insulator stacks ─────────────── */
+function drawBusbarDeco(g, d, t, S) {
+  const line = a => 'rgba(' + S.line + ',' + a + ')';
+  const T2 = Math.PI * 2;
+  g.save();
+  g.strokeStyle = 'rgba(0,0,0,0.4)'; g.lineWidth = 5; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(d.pts[0][0], d.pts[0][1]);
+  for (let i = 1; i < d.pts.length; i++) g.lineTo(d.pts[i][0], d.pts[i][1]);
+  g.stroke();
+  g.strokeStyle = line(0.34); g.lineWidth = 2; g.stroke();
+  g.strokeStyle = line(0.14); g.lineWidth = 1;
+  g.beginPath(); g.moveTo(d.pts[0][0], d.pts[0][1] + 6);
+  for (let i = 1; i < d.pts.length; i++) g.lineTo(d.pts[i][0], d.pts[i][1] + 6);
+  g.stroke();
+  for (const [px, py] of d.pts) {
+    g.fillStyle = '#bdb5ad'; g.beginPath(); g.arc(px, py, 4, 0, T2); g.fill();
+    g.strokeStyle = 'rgba(0,0,0,0.5)'; g.lineWidth = 1.2; g.stroke();
+    g.fillStyle = 'rgba(' + S.accent + ',0.7)'; g.beginPath(); g.arc(px, py, 1.6, 0, T2); g.fill();
+  }
+  g.restore();
+}
+DECO_CUSTOM.track = drawTrackDeco;
+DECO_CUSTOM.railcar = drawRailcarDeco;
+DECO_CUSTOM.gantry = drawGantryDeco;
+DECO_CUSTOM.road = drawRoadDeco;
+DECO_CUSTOM.substation = drawSubstationDeco;
+DECO_CUSTOM.busbar = drawBusbarDeco;
+DECO_STATIC_TYPES.track = 1; DECO_STATIC_TYPES.road = 1;          // floor art, under the slabs
+DECO_STATIC_TYPES.railcar = 1; DECO_STATIC_TYPES.substation = 1; DECO_STATIC_TYPES.busbar = 1;
+DECO_WALL_TOP_TYPES.railcar = 1; DECO_WALL_TOP_TYPES.substation = 1; DECO_WALL_TOP_TYPES.busbar = 1;
+
 /* everything a renderer may know, packed once per draw */
 function robotDrawOpts(rb, dead, still, headRel) {
   let lit = dead ? 0 : rb.glow;
@@ -5564,6 +6988,51 @@ function drawCone(g) {
     for (let i = 0; i < conePts.length; i += 2) g.lineTo(conePts[i], conePts[i + 1]);
     g.closePath(); g.fill();
     g.strokeStyle = LN(0.07); g.lineWidth = 1; g.stroke();
+  }
+}
+
+/* the sweeping masts: beam on the floor, then the mast itself on its footing */
+function drawSearchlights(g) {
+  if (!searchlights.length) return;
+  const power = searchlightPower();
+  for (const sl of searchlights) {
+    if (power > 0.02) {
+      castBeam(sl);
+      const a = (0.125 + sl.lit * 0.16) * power;
+      const gr = g.createRadialGradient(sl.x, sl.y, 12, sl.x, sl.y, sl.range);
+      gr.addColorStop(0, `rgba(255,246,222,${(a * 1.7).toFixed(3)})`);
+      gr.addColorStop(0.3, ACC(a.toFixed(3)));
+      gr.addColorStop(1, ACC(0));
+      g.fillStyle = gr;
+      g.beginPath(); g.moveTo(sl.x, sl.y);
+      for (let i = 0; i < beamPts.length; i += 2) g.lineTo(beamPts[i], beamPts[i + 1]);
+      g.closePath(); g.fill();
+      g.strokeStyle = `rgba(255,246,222,${(0.14 * power + sl.lit * 0.22).toFixed(3)})`; g.lineWidth = 1.2; g.stroke();
+      if (sl.lit > 0.05) {   // the floor under you goes white-hot
+        const pg = g.createRadialGradient(player.x, player.y, 2, player.x, player.y, 46);
+        pg.addColorStop(0, `rgba(255,250,236,${(0.30 * sl.lit).toFixed(3)})`); pg.addColorStop(1, 'rgba(255,250,236,0)');
+        g.fillStyle = pg; g.beginPath(); g.arc(player.x, player.y, 46, 0, TAU); g.fill();
+      }
+    }
+    g.save(); g.translate(sl.x, sl.y);
+    g.fillStyle = 'rgba(0,0,0,0.45)'; g.beginPath(); g.ellipse(3, 4, 15, 11, 0, 0, TAU); g.fill();
+    g.fillStyle = '#1c1f27'; g.beginPath(); g.arc(0, 0, 13, 0, TAU); g.fill();
+    g.strokeStyle = LN(0.35); g.lineWidth = 1.5; g.stroke();
+    g.strokeStyle = LN(0.18); g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(-9, -9); g.lineTo(9, 9); g.moveTo(9, -9); g.lineTo(-9, 9); g.stroke();
+    g.rotate(sl.ang);
+    g.fillStyle = '#3a3f4c'; rrect(g, -7, -7, 17, 14, 3); g.fill();
+    g.strokeStyle = LN(0.45); g.lineWidth = 1.2; g.stroke();
+    g.fillStyle = '#14161c'; g.fillRect(-5, -4, 9, 8);
+    g.fillStyle = power > 0.02 ? `rgba(255,246,222,${(0.35 + 0.6 * power).toFixed(3)})` : '#2a2d36';
+    g.fillRect(8, -6, 3, 12);
+    if (power > 0.02) {
+      g.fillStyle = ACC((0.5 * power).toFixed(3)); g.fillRect(6, -5, 2, 10);
+      const lg = g.createRadialGradient(10, 0, 1, 10, 0, 22);
+      lg.addColorStop(0, `rgba(255,246,222,${(0.55 * power).toFixed(3)})`); lg.addColorStop(1, 'rgba(255,246,222,0)');
+      g.fillStyle = lg; g.beginPath(); g.arc(10, 0, 22, 0, TAU); g.fill();
+    }
+    g.restore();
   }
 }
 
@@ -5728,8 +7197,37 @@ function drawDynamicLevel(g) {
   // exit
   const e = CONFIG.EXIT_RECT;
   const gateExit = LEVEL.exitKind === 'gate';
+  const roadExit = LEVEL.exitKind === 'road';
   const shutterCount = Math.max(1, Math.ceil((e.h - 6) / 16));
   const drawClosedExit = (slide, jitter) => {
+    if (roadExit) {
+      /* a boom barrier hinged beside the pad's north-west corner. Top-down, a
+         lifting arm foreshortens toward its pivot — so the arm shrinks as it
+         rises and its shadow pulls away from it. */
+      const lift = clamp(slide / (e.h + 12), 0, 1), ez = lift * lift * (3 - 2 * lift);
+      const px = e.x - 4 + jitter, py = e.y - 12;
+      const len = (e.h + 20) * (1 - 0.86 * ez);
+      g.fillStyle = `rgba(0,0,0,${(0.32 * (1 - ez)).toFixed(3)})`;
+      g.fillRect(px - 3 + 3 + ez * 10, py + 4 + ez * 8, 7, len);
+      g.fillStyle = '#2a2a2e'; g.fillRect(px - 9, py - 14, 18, 16);          // counterweight
+      g.strokeStyle = LN(0.35); g.lineWidth = 1.2; g.strokeRect(px - 8.5, py - 13.5, 17, 15);
+      for (let i = 0; i < len; i += 14) {                                  // striped arm
+        g.fillStyle = (i / 14) % 2 ? ACC(0.85) : 'rgba(240,236,228,0.92)';
+        g.fillRect(px - 3.5, py + i, 7, Math.min(14, len - i));
+      }
+      g.strokeStyle = 'rgba(0,0,0,0.55)'; g.lineWidth = 1; g.strokeRect(px - 3.5, py, 7, len);
+      g.fillStyle = '#15161a'; g.beginPath(); g.arc(px, py, 5.5, 0, TAU); g.fill();  // pivot
+      g.strokeStyle = LN(0.5); g.lineWidth = 1.2; g.stroke();
+      const blink = Math.sin(state.time * 6) > 0;
+      g.fillStyle = blink ? ACC(0.95) : ACC(0.25);
+      g.beginPath(); g.arc(px, py + len * 0.55, 3, 0, TAU); g.fill();
+      if (blink) {
+        const bg = g.createRadialGradient(px, py + len * 0.55, 1, px, py + len * 0.55, 18);
+        bg.addColorStop(0, ACC(0.35)); bg.addColorStop(1, ACC(0));
+        g.fillStyle = bg; g.beginPath(); g.arc(px, py + len * 0.55, 18, 0, TAU); g.fill();
+      }
+      return;
+    }
     if (!gateExit) {
       g.fillStyle = 'rgba(38,38,38,0.95)';
       for (let i = 0; i < shutterCount; i++)
@@ -5768,8 +7266,9 @@ function drawDynamicLevel(g) {
     g.fillStyle = GDC((pulse * open).toFixed(3)); g.fillRect(e.x, e.y, e.w, e.h);
     g.strokeStyle = GDC((0.55 * open).toFixed(3)); g.lineWidth = 2;
     g.strokeRect(e.x + 2, e.y + 2, e.w - 4, e.h - 4);
-    // shutter bars sliding away
+    // shutter bars sliding away (the boom arm lifts out of the road)
     if (open < 1) drawClosedExit(gateExit ? open * (e.w / 2 + 8) : open * (e.h + 12), 0);
+    else if (roadExit) drawClosedExit(e.h + 12, 0);   // the raised arm stays visible
   } else {
     // sealed doors — they rattle while being forced, with a thin pry-progress bar
     const f = clamp(state.forceT / CONFIG.ELEV_FORCE_TIME, 0, 1);
@@ -5787,6 +7286,15 @@ function drawDynamicLevel(g) {
     g.fillRect(e.x - 5, e.y - 7, 8, e.h + 14); g.fillRect(e.x + e.w - 3, e.y - 7, 8, e.h + 14);
     g.fillRect(e.x - 5, e.y - 7, e.w + 10, 8);
     g.fillStyle = ACC(0.65); g.fillRect(e.x - 5, e.y - 7, e.w + 10, 2);
+  }
+  if (roadExit) {   // kerb islands either side of the barrier, chevrons on the deck
+    g.fillStyle = '#4a4650';
+    g.fillRect(e.x - 10, e.y - 26, 16, 14); g.fillRect(e.x - 10, e.y + e.h + 12, 16, 14);
+    g.strokeStyle = LN(0.4); g.lineWidth = 1.2;
+    g.strokeRect(e.x - 9.5, e.y - 25.5, 15, 13); g.strokeRect(e.x - 9.5, e.y + e.h + 12.5, 15, 13);
+    g.strokeStyle = LN(0.16); g.lineWidth = 2; g.beginPath();
+    for (let i = 0; i < 3; i++) { const cx = e.x + 22 + i * 22; g.moveTo(cx, e.y + 16); g.lineTo(cx + 12, e.y + e.h / 2); g.lineTo(cx, e.y + e.h - 16); }
+    g.stroke();
   }
 
   /* the lift's own indicator — POWER n/N with a segment per breaker. This is
@@ -6186,10 +7694,107 @@ function wrapIntro(text, maxChars) {
   return lines;
 }
 
+/* ── Session 10: colour mix + the epilogue ─────────────────────────────────
+   The run ends on the road out of the complex, looking east. The sky finishes
+   coming up, the sun clears the ridge, and the runner walks away up the road
+   until the card lands. Screen-space; nothing here touches the sim.        */
+function mixHex(a, b, t) {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  const r = Math.round(lerp(pa >> 16, pb >> 16, t)), gg = Math.round(lerp((pa >> 8) & 255, (pb >> 8) & 255, t));
+  const bl = Math.round(lerp(pa & 255, pb & 255, t));
+  return 'rgb(' + r + ',' + gg + ',' + bl + ')';
+}
+function drawEpilogue(g) {
+  const w = view.cssW, h = view.cssH, t = state.winT, D = LEVEL.dawn || {};
+  const day = clamp(t / 11, 0, 1), ease = day * day * (3 - 2 * day);
+  const horizon = Math.round(h * 0.58), vx = w * 0.6;
+  // sky
+  const sky = g.createLinearGradient(0, 0, 0, horizon);
+  sky.addColorStop(0, mixHex(D.top1 || '#5d5aa0', D.top2 || '#7fb4e6', ease));
+  sky.addColorStop(0.7, mixHex(D.hor1 || '#ffb36e', D.hor2 || '#fff1cc', ease * 0.85));
+  sky.addColorStop(1, mixHex(D.hor1 || '#ffb36e', D.hor2 || '#fff1cc', ease));
+  g.fillStyle = sky; g.fillRect(0, 0, w, horizon + 1);
+  // sun
+  const sunR = Math.max(14, Math.min(w, h) * 0.075);
+  const sx = vx + w * 0.06, sy = horizon + sunR * 1.3 - sunR * 2.9 * ease;
+  const glow = g.createRadialGradient(sx, sy, sunR * 0.5, sx, sy, sunR * 7);
+  glow.addColorStop(0, `rgba(255,240,200,${(0.35 + 0.3 * ease).toFixed(3)})`);
+  glow.addColorStop(0.35, 'rgba(255,205,130,0.16)'); glow.addColorStop(1, 'rgba(255,205,130,0)');
+  g.fillStyle = glow; g.fillRect(0, 0, w, horizon);
+  g.fillStyle = '#fff6dc'; g.beginPath(); g.arc(sx, sy, sunR, 0, TAU); g.fill();
+  // ridge line — hides the sun until it clears
+  g.fillStyle = mixHex('#221a2e', '#6a7a96', ease * 0.75);
+  g.beginPath(); g.moveTo(0, horizon + 2);
+  for (let x = 0; x <= w + 20; x += 18) {
+    const u = x / w;
+    g.lineTo(x, horizon - 6 - (Math.sin(u * 7.1 + 0.8) * 0.5 + 0.5) * h * 0.035 - (Math.sin(u * 19.3 + 2.1) * 0.5 + 0.5) * h * 0.012);
+  }
+  g.lineTo(w + 20, horizon + 2); g.closePath(); g.fill();
+  // ground
+  const gnd = g.createLinearGradient(0, horizon, 0, h);
+  gnd.addColorStop(0, mixHex('#2a2036', '#8a8f7c', ease * 0.7)); gnd.addColorStop(1, mixHex('#1a1422', '#5a5f52', ease * 0.7));
+  g.fillStyle = gnd; g.fillRect(0, horizon, w, h - horizon);
+  // the road, in perspective, with the barrier posts at the bottom corners
+  const P = z => { const k = Math.pow(1 - z, 1.7); return { y: horizon + (h - horizon) * k, k }; };
+  g.fillStyle = mixHex('#221c2a', '#6d6a66', ease * 0.6);
+  g.beginPath(); g.moveTo(w * 0.2, h + 2); g.lineTo(w * 0.8, h + 2); g.lineTo(vx + 5, horizon); g.lineTo(vx - 5, horizon); g.closePath(); g.fill();
+  g.fillStyle = `rgba(255,236,200,${(0.25 + 0.25 * ease).toFixed(3)})`;
+  for (let i = 0; i < 18; i++) {
+    const z0 = i / 18, z1 = z0 + 0.028, a = P(z0), b = P(z1);
+    if (b.y < horizon + 2) continue;
+    const xa = lerp(w * 0.5, vx, z0), xb = lerp(w * 0.5, vx, z1);
+    g.beginPath(); g.moveTo(xa - 3 * a.k, a.y); g.lineTo(xa + 3 * a.k, a.y); g.lineTo(xb + 3 * b.k, b.y); g.lineTo(xb - 3 * b.k, b.y); g.closePath(); g.fill();
+  }
+  g.strokeStyle = `rgba(200,200,210,${(0.35 + 0.2 * ease).toFixed(3)})`; g.lineWidth = 1.2;
+  g.beginPath();
+  for (let i = 0; i < 13; i++) {   // fence posts receding along both verges
+    const z = i / 13, p = P(z);
+    if (p.y < horizon + 3) continue;
+    const ph = 26 * p.k + 2;
+    for (const side of [-1, 1]) { const x = lerp(w * 0.5 + side * w * 0.36, vx + side * 10, z); g.moveTo(x, p.y); g.lineTo(x, p.y - ph); }
+  }
+  g.stroke();
+  // the barrier arm, raised, at the bottom right; its lamp dies with the grid
+  g.fillStyle = '#2a2a2e'; g.fillRect(w * 0.86, h - 60, 14, 60);
+  g.fillStyle = t < 2.2 && Math.sin(t * 9) > 0 ? ACC(0.9) : ACC(0.18);
+  g.beginPath(); g.arc(w * 0.86 + 7, h - 64, 4, 0, TAU); g.fill();
+  // the runner, walking away up the road
+  // birds, once the light is up
+  if (t > 5) {
+    g.strokeStyle = `rgba(40,30,50,${clamp((t - 5) / 3, 0, 0.7).toFixed(3)})`; g.lineWidth = 1.3; g.lineCap = 'round';
+    g.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const bx = w * (0.18 + i * 0.055) + (t - 5) * (9 + i * 1.5), by = h * (0.22 + Math.sin(i * 1.7) * 0.05) - (t - 5) * 2;
+      const fl = Math.sin(t * 9 + i * 1.3) * 3.5, sz = 5 + (i % 3);
+      g.moveTo(bx - sz, by + fl); g.lineTo(bx, by); g.lineTo(bx + sz, by + fl);
+    }
+    g.stroke();
+  }
+  const z = clamp(t / 26, 0, 0.8), rp = P(z), rx = lerp(w * 0.5, vx, z) + 2;
+  const sc = Math.max(0.12, rp.k) * 1.25 * Math.max(0.9, h / 540), step = Math.sin(t * 8.5);
+  g.save(); g.translate(rx, rp.y); g.scale(sc, sc);
+  g.fillStyle = `rgba(0,0,0,${(0.35 * (1 - ease * 0.5)).toFixed(3)})`;
+  g.beginPath(); g.ellipse(0, 0, 16, 5, 0, 0, TAU); g.fill();
+  g.strokeStyle = '#15111c'; g.lineCap = 'round'; g.lineWidth = 5;
+  g.beginPath(); g.moveTo(0, -30); g.lineTo(step * 7, -2); g.moveTo(0, -30); g.lineTo(-step * 7, -2); g.stroke();   // legs
+  g.lineWidth = 3.5; g.beginPath(); g.moveTo(-2, -40); g.lineTo(-6 - step * 5, -22); g.moveTo(2, -40); g.lineTo(6 + step * 5, -22); g.stroke();   // arms
+  g.fillStyle = '#15111c'; rrect(g, -7, -52, 14, 26, 5); g.fill();   // torso
+  g.beginPath(); g.arc(0, -58, 6.5, 0, TAU); g.fill();               // head
+  g.fillStyle = `rgba(255,220,160,${(0.35 + 0.4 * ease).toFixed(3)})`;
+  g.beginPath(); g.arc(2.5, -58, 6.5, -1.2, 1.0); g.lineTo(2.5, -58); g.closePath(); g.fill();   // rim light
+  g.restore();
+}
+
 function render() {
   const { dpr, scale } = view;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = STYLE.bg; ctx.fillRect(0, 0, view.cssW, view.cssH);
+  if (LEVEL.dawn) {   // Session 10: the sky comes up with the isolators
+    const D = LEVEL.dawn, L = state.lightLevel;
+    const sky = ctx.createLinearGradient(0, 0, 0, view.cssH);
+    sky.addColorStop(0, mixHex(D.top0, D.top1, L)); sky.addColorStop(1, mixHex(D.hor0, D.hor1, L));
+    ctx.fillStyle = sky;
+  } else ctx.fillStyle = STYLE.bg;
+  ctx.fillRect(0, 0, view.cssW, view.cssH);
 
   const ox = -view.camX + state.shakeX, oy = -view.camY + state.shakeY;
   const playfield = () => ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * scale * ox, dpr * scale * oy);
@@ -6223,6 +7828,13 @@ function render() {
   if (state.lightLevel > 0.001) {
     ctx.fillStyle = `rgba(196,208,226,${(0.030 * state.lightLevel).toFixed(4)})`;
     ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+    if (LEVEL.dawn) {   // low sun from the east, one notch warmer per isolator
+      const L = state.lightLevel, wg = ctx.createLinearGradient(0, 0, WORLD_W, 0);
+      wg.addColorStop(0, `rgba(${LEVEL.dawn.wash},${(0.06 * L).toFixed(3)})`);
+      wg.addColorStop(1, `rgba(${LEVEL.dawn.wash},${(0.22 * L).toFixed(3)})`);
+      ctx.fillStyle = wg; ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+      ctx.fillStyle = `rgba(255,244,226,${(0.07 * L).toFixed(3)})`; ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+    }
   }
   drawDeco(ctx);
   drawDynamicLevel(ctx);
@@ -6232,6 +7844,7 @@ function render() {
   drawGear(ctx);
   drawPress(ctx);
   drawCone(ctx);
+  drawSearchlights(ctx);
   // click-target dot
   if (input.target) {
     ctx.fillStyle = LN(0.35);
@@ -6310,10 +7923,13 @@ function render() {
     ctx.fillStyle = `rgba(245,245,245,${(state.flash * 0.85).toFixed(3)})`;
     ctx.fillRect(0, 0, view.cssW, view.cssH);
   }
-  // win dim
+  // win dim — or, on the last floor, the epilogue
   if (state.mode === 'WIN') {
-    ctx.fillStyle = `rgba(0,0,0,${clamp(state.winT * 0.5, 0, 0.45).toFixed(3)})`;
-    ctx.fillRect(0, 0, view.cssW, view.cssH);
+    if (LEVEL.epilogue) drawEpilogue(ctx);
+    else {
+      ctx.fillStyle = `rgba(0,0,0,${clamp(state.winT * 0.5, 0, 0.45).toFixed(3)})`;
+      ctx.fillRect(0, 0, view.cssW, view.cssH);
+    }
     if (state.surface) {   // the ride up ended in black; let the end screen fade out of it
       const a = clamp(1 - state.winT * 0.8, 0, 1);
       if (a > 0) { ctx.fillStyle = `rgba(3,3,3,${a.toFixed(3)})`; ctx.fillRect(0, 0, view.cssW, view.cssH); }
@@ -6336,8 +7952,9 @@ function render() {
     }
     if (cover > 0.55) {
       const next = state.elevArrived ? LEVEL : LEVELS[currentLevel + 1];
-      const icon = !state.elevArrived && LEVEL.exitKind === 'vehicle' ? '▶' : LEVEL.exitKind === 'gate' ? '◆' : '▲';
-      const label = icon + '  ' + (next ? next.name : LEVEL.exitKind === 'gate' ? 'OUTSIDE' : 'SURFACE');
+      const icon = !state.elevArrived && (LEVEL.exitKind === 'vehicle' || LEVEL.exitKind === 'road') ? '▶'
+                 : LEVEL.exitKind === 'gate' ? '◆' : '▲';
+      const label = icon + '  ' + (next ? next.name : LEVEL.endLabel || (LEVEL.exitKind === 'gate' ? 'OUTSIDE' : 'SURFACE'));
       ctx.fillStyle = `rgba(210,210,210,${((cover - 0.55) / 0.45 * 0.8).toFixed(3)})`;
       ctx.font = '600 13px ui-monospace, Menlo, Consolas, monospace';
       try { ctx.letterSpacing = '0.34em'; } catch (_) {}
@@ -6371,12 +7988,14 @@ function tick(dt) {   // one full sim+render step (also callable from GAME.step)
     state.shakeX = (Math.random() - 0.5) * state.shake;
     state.shakeY = (Math.random() - 0.5) * state.shake;
   } else { state.shakeX = state.shakeY = 0; }
+  for (const sl of searchlights) sl.ang = searchlightAngle(sl, state.time);   // the masts sweep in every mode
 
   if (state.mode === 'PLAY') {
     updatePlayer(dt);
     updateGear(dt);
     updatePress(dt);
     if (state.mode === 'PLAY') {          // a hazard may have just caught the player
+      updateSearchlights(dt);
       updateRobots(dt);
       updateTriggers(dt);
     }
@@ -6411,7 +8030,7 @@ function tick(dt) {   // one full sim+render step (also callable from GAME.step)
       rb.slumpT = Math.min(1, rb.slumpT + dt);
       rb.glow = Math.max(0, rb.glow - dt * 2);   // updateRobots is parked; finish the fade
     }
-    if (state.winT > 0.6) winEl.classList.add('show');
+    if (state.winT > (LEVEL.epilogue ? 5.5 : 0.6)) winEl.classList.add('show');
   }
   if (state.flash > 0) state.flash = Math.max(0, state.flash - dt * 2.2);
 
@@ -6612,6 +8231,8 @@ window.GAME = { CONFIG, LEVELS, STYLE_DEFAULT, VARIANTS, view, player, robots, g
   sightLOS: visionLOS,
   canSee: robotCanSee,
   yardRenderer: drawPerimeterYardDeco,
+  searchlights, beam: playerInBeam, finaleArt: { drawTrackDeco, drawRailcarDeco, drawGantryDeco, drawRoadDeco, drawSubstationDeco, drawBusbarDeco },
+  epilogue: () => drawEpilogue(ctx),
   customDeco: DECO_CUSTOM,
   drawDynamic: drawDynamicLevel,
   wrapIntro,
