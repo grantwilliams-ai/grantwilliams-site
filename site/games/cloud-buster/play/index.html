@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Cloud Buster</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Cloud Buster 2 — a little time with the sky</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#2a3a58">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -19,14 +19,16 @@
   #title { position: absolute; left: 0; right: 0; top: 30%; text-align: center; font-size: clamp(34px, 7vmin, 60px); font-style: italic; letter-spacing: .02em;
     color: #fff; text-shadow: 0 2px 6px rgba(16,20,40,.8), 0 0 30px rgba(16,20,40,.55); opacity: 0; transition: opacity 2.2s ease; pointer-events: none; z-index: 2; }
   #title.on { opacity: 1; }
+  canvas#sky:focus-visible { outline: 2px solid #fff1c8; outline-offset: -5px; }
+  @media (prefers-reduced-motion: reduce) { canvas#sky, #title { transition: none; } }
 </style>
 </head>
 <body>
-<canvas id="sky" aria-label="An enormous sky of drifting clouds. Press and hold on a cloud to let it drift away."></canvas>
+<canvas id="sky" tabindex="0" aria-label="An enormous sky of drifting clouds. Point and hold on a cloud, or use the arrow keys to aim and hold Space or Enter. Escape releases."></canvas>
 <div id="title" class="on">Cloud Buster</div>
 <script>
 window.CB = window.CB || {};
-CB.GLSL = {"bustsim":"#version 300 es\n// The dissipation field. A small volume around each cloud being worked on, kept in a flat atlas.\n// r: erosion, how much of the cloud is gone here.  g: heat from the beam, spreads and fades.\n// b,a: drift of the material sideways and upward, in km, which pulls the noise out into wisps.\nprecision highp float;\nprecision highp sampler2D;\nprecision highp sampler3D;\nin vec2 vUv;\nout vec4 fragColor;\nuniform sampler2D uPrev;\nuniform sampler3D uShape;\nuniform vec4  uSlot[4];        // centre x, z (cloud frame, km), half width (km), 1 if live, 2 if handing over\nuniform vec3  uBeamO, uBeamD;  // beam ray in cloud frame\nuniform vec4  uBeam;           // t start, t end, angular radius (tan), power\nuniform float uDt, uTime, uMap, uTop;\n\nconst float TILE = 64.0, SLOT = 256.0;\nconst int LAYERS = 16;\n\nivec2 texelOf(int slot, int k, ivec2 ij) {\n  return ivec2((slot & 1) * 256 + (k & 3) * 64 + ij.x, ((slot >> 1) & 1) * 256 + (k >> 2) * 64 + ij.y);\n}\nvec4 at(int slot, int k, ivec2 ij) {\n  ij = clamp(ij, ivec2(0), ivec2(63));\n  k = clamp(k, 0, LAYERS - 1);\n  return texelFetch(uPrev, texelOf(slot, k, ij), 0);\n}\n// Smooth pseudo-curl swirl from a few sines, cheap and never repeating visibly\nvec2 swirl(vec3 p, float t) {\n  float a = sin(p.y * 1.7 + t * 0.21 + sin(p.x * 0.9 - t * 0.13) * 1.6) + sin(p.z * 1.1 + p.y * 0.6 - t * 0.17);\n  float b = sin(p.x * 1.9 - t * 0.19 + cos(p.y * 1.3 + t * 0.15) * 1.4) + cos(p.z * 0.8 - p.x * 0.7 + t * 0.11);\n  float c = sin((p.x + p.y) * 4.1 + t * 0.4) * 0.35;\n  return vec2(a + c, -b + c);\n}\n\nvoid main() {\n  ivec2 px = ivec2(gl_FragCoord.xy);\n  int slot = (px.x >= 256 ? 1 : 0) + (px.y >= 256 ? 2 : 0);\n  vec4 sl = uSlot[slot];\n  fragColor = vec4(0.0);\n  if (sl.w < 0.5) return;\n  ivec2 local = px % 256;\n  ivec2 ij = local % 64;\n  int k = (local.x / 64) + (local.y / 64) * 4;\n\n  vec4 s = at(slot, k, ij);\n  vec4 xm = at(slot, k, ij + ivec2(-1, 0)), xp = at(slot, k, ij + ivec2(1, 0));\n  vec4 zm = at(slot, k, ij + ivec2(0, -1)), zp = at(slot, k, ij + ivec2(0, 1));\n  vec4 ym = at(slot, k - 1, ij), yp = at(slot, k + 1, ij);\n\n  // World position of this voxel, cloud frame\n  vec2 uv = (vec2(ij) + 0.5) / TILE;\n  float y = (float(k) + 0.5) / float(LAYERS) * uTop - 0.2;\n  vec3 P = vec3(sl.x + (uv.x - 0.5) * 2.0 * sl.z, y, sl.y + (uv.y - 0.5) * 2.0 * sl.z);\n\n  // Patchy: some parts of a cloud give way sooner, so it never dissolves as a uniform fade\n  vec4 n = textureLod(uShape, vec3(P.x, P.y * 1.3, P.z) / 9.0, 0.0);\n  float patchy = 0.45 + 1.1 * smoothstep(0.3, 0.72, n.r * 0.6 + n.b * 0.4);\n\n  // Heat spreads, rises a little and leans down the wind. It creeps faster along some paths than others,\n  // so a gap opens in an uneven shape rather than a circle.\n  float q = s.g;\n  float avg = (xm.g * 0.75 + xp.g * 1.25 + zm.g + zp.g + ym.g * 1.2 + yp.g * 0.8) / 6.0;\n  float creep = 0.25 + 1.5 * smoothstep(0.34, 0.62, textureLod(uShape, P / 4.3, 0.0).g);\n  q += (avg - q) * min(0.85, uDt * 11.0 * creep);\n  q *= exp(-uDt * 0.5);\n\n  // The beam\n  vec3 w = P - uBeamO;\n  w.xz -= uMap * floor(w.xz / uMap + 0.5);\n  float t = dot(w, uBeamD);\n  vec3 toAxis = w - uBeamD * t;\n  float r = max(0.22, t * uBeam.z);\n  float d2 = dot(toAxis, toAxis) / (r * r);\n  float band = smoothstep(uBeam.x - 0.5, uBeam.x, t) * (1.0 - smoothstep(uBeam.y, uBeam.y + 0.8, t));\n  q += uBeam.w * band * exp(-d2) * uDt * 1.3;\n  q = min(q, 1.2);\n\n  // Erosion follows heat, then slowly heals so a part-worked cloud can knit itself back\n  float e = s.r;\n  e += q * patchy * uDt * 0.13;\n  e -= (0.012 + 0.03 * e) * uDt * (1.0 - smoothstep(0.0, 0.12, q));\n  e -= (sl.w - 1.0) * uDt * 0.4;     // handing over: the hole closes in a couple of seconds\n  e = clamp(e, 0.0, 1.0);\n\n  // Material is pushed out from the hot core and curls as it goes; slowly relaxes back\n  vec2 grad = vec2(xm.g - xp.g, ym.g - yp.g);\n  vec2 sw = swirl(P * 1.0, uTime);\n  vec2 v = grad * 1.6 + sw * q * 0.1 + vec2(0.0, q * 0.03);\n  vec2 drift = s.ba + v * uDt;\n  drift *= exp(-uDt * 0.08);\n  fragColor = vec4(e, q, clamp(drift, vec2(-1.2), vec2(1.2)));\n}\n","composite":"#version 300 es\n// Final picture: sky, sun, high cirrus, clouds, far hills, tone map, dither.\nprecision highp float;\nprecision highp sampler2D;\nprecision highp sampler3D;\nin vec2 vUv;\nout vec4 fragColor;\nuniform sampler2D uSky, uClouds, uRays, uWeather;\nuniform sampler3D uShape;\nuniform vec3  uCamF, uCamR, uCamU, uSunDir, uMoonDir, uSunCol, uSunGround, uHorizonTint, uBeamTint;\nuniform vec2  uCloudSize, uWind, uBloomAt;\nuniform float uTime, uExposure, uStars, uCirrus, uFlash, uRayGain, uAspect, uMap, uMoon;\nuniform vec4  uBeamLine;    // muzzle xy, aim point xy, in 0..1 screen space\nuniform vec3  uBeamInfo;    // strength 0..1, width at the muzzle (fraction of screen height), aspect\nuniform vec4  uFlock;       // centre xy in screen heights, bird half-span, strength\n\nconst float PI = 3.14159265;\nfloat sat(float x) { return clamp(x, 0.0, 1.0); }\nfloat hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat ign(vec2 p) { return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)))); }\n\nvec2 skyUv(vec3 d) {\n  vec2 a = normalize(d.xz), s = normalize(uSunDir.xz);\n  float az = acos(clamp(dot(a, s), -1.0, 1.0));\n  float el = asin(clamp(d.y, -1.0, 1.0));\n  float v = sign(el) * sqrt(abs(el) / (PI * 0.5));\n  return vec2(sqrt(az / PI), v * 0.5 + 0.5);\n}\nvec3 aces(vec3 c) {\n  c *= 0.82;\n  c = (c * (2.51 * c + 0.03)) / (c * (2.43 * c + 0.59) + 0.14);\n  return pow(clamp(c, 0.0, 1.0), vec3(1.0 / 2.2));\n}\n// Catmull-Rom in five taps: keeps cloud edges crisp when the buffer is smaller than the screen.\nvec4 sampleSharp(sampler2D t, vec2 uv, vec2 size) {\n  vec2 p = uv * size - 0.5, i = floor(p), f = p - i;\n  vec2 w0 = f * (-0.5 + f * (1.0 - 0.5 * f));\n  vec2 w1 = 1.0 + f * f * (-2.5 + 1.5 * f);\n  vec2 w2 = f * (0.5 + f * (2.0 - 1.5 * f));\n  vec2 w3 = f * f * (-0.5 + 0.5 * f);\n  vec2 w12 = w1 + w2, off = w2 / w12;\n  vec2 p0 = (i - 0.5) / size, p3 = (i + 2.5) / size, p12 = (i + 0.5 + off) / size;\n  vec4 r = vec4(0.0);\n  r += textureLod(t, vec2(p12.x, p0.y), 0.0) * w12.x * w0.y;\n  r += textureLod(t, vec2(p0.x, p12.y), 0.0) * w0.x * w12.y;\n  r += textureLod(t, p12, 0.0) * w12.x * w12.y;\n  r += textureLod(t, vec2(p3.x, p12.y), 0.0) * w3.x * w12.y;\n  r += textureLod(t, vec2(p12.x, p3.y), 0.0) * w12.x * w3.y;\n  float n = w12.x * w0.y + w0.x * w12.y + w12.x * w12.y + w3.x * w12.y + w12.x * w3.y;\n  return r / n;\n}\nfloat hillLine(float x, float s) {\n  return sin(x * 1.3 + s) * 0.5 + sin(x * 2.9 + s * 2.1) * 0.27 + sin(x * 6.1 + s * 0.7) * 0.13 + sin(x * 13.7 + s * 3.3) * 0.05;\n}\n// The shimmer: a slender shaft of disturbed air that narrows to the aim point, as parallel lines do in perspective.\n// Returns a sideways nudge for the picture behind it, and how much soft light it carries.\nvec3 shimmer(vec2 uv) {\n  if (uBeamInfo.x < 0.004) return vec3(0.0);\n  float asp = uBeamInfo.z;\n  vec2 a = uBeamLine.xy * vec2(asp, 1.0), b = uBeamLine.zw * vec2(asp, 1.0), p = uv * vec2(asp, 1.0);\n  vec2 ab = b - a;\n  float len = length(ab);\n  if (len < 0.001) return vec3(0.0);\n  vec2 dir = ab / len, side = vec2(-dir.y, dir.x);\n  float u = dot(p - a, dir) / len;\n  float d = dot(p - a, side);\n  if (u < -0.02 || u > 1.06) return vec3(0.0);\n  float un = clamp(u, 0.0, 0.995);\n  float w = uBeamInfo.y * (1.0 - un) + 0.002;\n  float body = exp(-d * d / (w * w));\n  if (body < 0.002) return vec3(0.0);\n  // Depth along the shaft grows without limit toward the vanishing point, so waves bunch up as they recede\n  float s = 1.0 / (1.0 - un) - 1.0;\n  float fade = smoothstep(-0.02, 0.07, u) * (1.0 - smoothstep(0.66, 1.0, u)) * uBeamInfo.x;     // it starts at the muzzle: no cut edge behind it\n  float wave = sin(s * 5.0 - uTime * 3.2);\n  float pulse = pow(0.5 + 0.5 * sin(s * 1.3 - uTime * 1.4), 4.0);\n  float nudge = sin(d / w * 2.4) * (0.6 + 0.4 * wave) * body * fade * w * 0.5;\n  float glow = body * fade * (0.09 + 0.24 * pulse);\n  return vec3(side * nudge / vec2(asp, 1.0), glow);\n}\n\n// A few distant birds, seen only as the curve of their wings.\nfloat birds(vec2 p) {\n  float size = uFlock.z, a = 0.0;\n  vec2 d = p - uFlock.xy;\n  if (abs(d.x) > size * 9.0 || abs(d.y) > size * 5.0) return 0.0;\n  for (int i = 0; i < 9; i++) {\n    float fi = float(i);\n    vec2 o = vec2(hash(vec2(fi, 1.3)) - 0.5, hash(vec2(fi, 4.7)) - 0.5) * vec2(11.0, 5.0);\n    o += vec2(sin(uTime * 0.17 + fi * 2.1), cos(uTime * 0.13 + fi * 1.3)) * 0.5;\n    vec2 q = (d - o * size) / size;\n    float x = abs(q.x);\n    if (x > 1.0 || abs(q.y) > 1.0) continue;\n    float beat = sin(uTime * (4.6 + hash(vec2(fi, 9.1))) + fi * 1.7);\n    float glide = smoothstep(-0.2, 0.5, sin(uTime * 0.31 + fi * 2.7));\n    float lift = mix(0.1, 0.55 * beat + 0.1, glide);\n    float wing = lift * x * (1.7 - x) - 0.1 * x * x;\n    float th = mix(0.15, 0.03, x);\n    a = max(a, (1.0 - smoothstep(th - 0.02, th + 0.1, abs(q.y - wing))));\n  }\n  return a * uFlock.w;\n}\n\nvoid main() {\n  vec3 sh = shimmer(vUv);\n  vec2 uvIn = vUv + sh.xy;\n  vec2 ndc = uvIn * 2.0 - 1.0;\n  vec3 rd = normalize(uCamF + uCamR * ndc.x + uCamU * ndc.y);\n  vec3 sky = texture(uSky, skyUv(vec3(rd.x, max(rd.y, -0.02), rd.z))).rgb;\n\n  // Sun disc and its bright aureole\n  float c = dot(rd, uSunDir);\n  float ang = acos(clamp(c, -1.0, 1.0));\n  sky += uSunCol * ((1.0 - smoothstep(0.0085, 0.0105, ang)) * 12.0 + exp(-ang * 38.0) * 0.12 + exp(-ang * 9.0) * 0.009);\n\n  // The moon, a little larger than life, with a faint ring of light in the thin air around it\n  if (uMoon > 0.003) {\n    float m = acos(clamp(dot(rd, uMoonDir), -1.0, 1.0));\n    vec3 side = normalize(cross(uMoonDir, vec3(0.0, 1.0, 0.0))), upward = cross(side, uMoonDir);\n    vec2 mq = vec2(dot(rd, side), dot(rd, upward));\n    float seas = texture(uShape, vec3(mq * 9.0, 0.37)).g;\n    float disc = 1.0 - smoothstep(0.0165, 0.0185, m);\n    sky += vec3(0.93, 0.95, 1.0) * uMoon * (disc * (0.62 + 0.7 * smoothstep(0.3, 0.62, seas)) + exp(-m * 20.0) * 0.03 + exp(-m * 5.0) * 0.008);\n  }\n\n  // Stars, once the sky is dark enough\n  if (uStars > 0.003 && rd.y > 0.0) {\n    vec2 g = vec2(atan(rd.x, -rd.z), asin(rd.y)) * 150.0;\n    vec2 id = floor(g);\n    float h = hash(id);\n    if (h > 0.986) {\n      vec2 f = fract(g) - 0.5 - (vec2(hash(id + 3.1), hash(id + 7.7)) - 0.5) * 0.7;\n      float tw = 0.75 + 0.25 * sin(uTime * (1.0 + h * 3.0) + h * 90.0);\n      sky += vec3(0.85, 0.9, 1.0) * (1.0 - smoothstep(0.0, 0.17, length(f))) * uStars * tw * (h - 0.986) * 90.0 * sat(rd.y * 6.0);\n    }\n  }\n\n  // High cirrus: a thin sheet far above the clouds, catching the light first and keeping it longest\n  if (uCirrus > 0.003 && rd.y > 0.01) {\n    vec3 hit = rd / rd.y;\n    vec2 q = hit.xz * 0.055 + uWind * 0.0011;\n    float warp = texture(uShape, vec3(q * 0.7, uTime * 0.0006)).r - 0.5;\n    vec2 streak = vec2(q.x * 0.45 + q.y * 0.15 + warp * 0.2, q.y * 1.5 - q.x * 0.2 - warp * 0.14);\n    float n0 = texture(uShape, vec3(streak, 0.31 + uTime * 0.0004)).g;\n    float n1 = texture(uShape, vec3(streak * 3.1 + 0.3, 0.61)).b;\n    float cov = smoothstep(0.6, 0.86, n0 * 0.74 + n1 * 0.26) * sat(rd.y * 3.5);\n    float forward = 0.5 + 1.6 * exp(-ang * 2.4);\n    sky = mix(sky, sky * 0.96 + uSunCol * forward * 0.03, cov * uCirrus * 0.55);\n  }\n\n  // Clouds over the sky\n  vec4 cl = sampleSharp(uClouds, uvIn, uCloudSize);\n  vec3 col = sky * clamp(cl.a, 0.0, 1.0) + max(cl.rgb, vec3(0.0));\n  col += uSunCol * sh.z * 0.14 + uBeamTint * sh.z;\n\n  // Thin cloud close to the sun takes on faint pearly colours, as real cloud edges do\n  float thin = cl.a * (1.0 - cl.a) * 4.0;\n  if (thin > 0.02 && ang < 0.9) {\n    float band = ang * 11.0 + cl.a * 7.0;\n    vec3 pearl = 0.5 + 0.5 * cos(band + vec3(0.0, 2.1, 4.2));\n    col += uSunCol * (pearl - 0.42) * thin * exp(-ang * 3.2) * 0.012;\n  }\n\n  // Light streaming between the clouds\n  if (uRayGain > 0.002) {\n    float shaft = texture(uRays, uvIn).r;\n    float reach = exp(-ang * 1.5) * uRayGain;\n    col += uSunCol * (shaft * shaft - 0.28) * reach * 0.03;\n  }\n\n  // When a large cloud opens, the light comes pouring through where it stood\n  if (uFlash > 0.003) {\n    vec2 dp = (uvIn - uBloomAt) * vec2(uAspect, 1.0);\n    float r2 = dot(dp, dp);\n    col += (uSunCol * 0.014 + vec3(0.012, 0.009, 0.005)) * uFlash * (exp(-r2 * 8.0) + 0.2 * exp(-r2 * 1.6));\n  }\n\n  if (uFlock.w > 0.002) col = mix(col, sky * 0.2, birds(vUv * vec2(uAspect, 1.0)) * 0.85);\n\n  // The country below: fields fading into haze, with the shadows of the real clouds sailing across them\n  if (ndc.y < 0.2) {\n    float az = atan(rd.x, -rd.z);\n    float el = asin(rd.y);\n    vec3 haze = texture(uSky, skyUv(normalize(vec3(rd.x, 0.02, rd.z)))).rgb;\n    float sunHigh = max(uSunDir.y, 0.1);\n    if (rd.y < 0.06) {\n      float tg = 0.11 / max(-rd.y + 0.004, 0.003);\n      tg = min(tg, 60.0);\n      vec2 g = rd.xz / max(length(rd.xz), 0.001) * tg;\n      vec3 nq = vec3(g * 0.075, 0.31);\n      float n1 = texture(uShape, nq).g, n2 = texture(uShape, nq * vec3(3.1, 3.1, 1.0)).b;\n      vec3 field = mix(vec3(0.20, 0.25, 0.13), vec3(0.42, 0.37, 0.20), smoothstep(0.32, 0.68, n1));\n      field *= 0.72 + 0.56 * n2;\n      vec2 sp = (g + uSunDir.xz / sunHigh * 2.2 + uWind) / uMap;\n      float pot = texture(uWeather, sp).r;\n      float lit = 1.0 - 0.72 * smoothstep(-0.6, 1.0, pot);\n      vec3 ground = field * (uHorizonTint * 0.9 + uSunGround * max(uSunDir.y + 0.08, 0.0) * lit * 0.55);\n      float fog = 1.0 - exp(-tg * 0.085);\n      vec3 plain = mix(ground, haze * vec3(0.64, 0.71, 0.8), fog);\n      float blend = (1.0 - smoothstep(-0.002, 0.0, el));\n      col = mix(col, plain, blend);\n    }\n    for (int i = 0; i < 3; i++) {\n      float fi = float(i);\n      float top = 0.012 + 0.009 * fi + hillLine(az * (1.1 + fi * 0.9), 2.0 + fi * 4.3) * (0.006 + 0.0035 * fi);\n      float edge = (1.0 - smoothstep(top - 0.0007, top + 0.0007, el));\n      if (edge > 0.0) {\n        float depth = sat((top - el) / 0.03);            // ridges melt into the haze at their feet\n        float fog = 0.74 - 0.13 * fi + 0.2 * depth;\n        vec3 land = uHorizonTint * vec3(0.42, 0.5, 0.6);\n        vec3 hill = mix(land, haze * vec3(0.72, 0.78, 0.92), fog);\n        hill += uSunCol * 0.012 * smoothstep(top - 0.003, top, el) * (0.5 + 0.5 * dot(normalize(rd.xz), normalize(uSunDir.xz)));\n        col = mix(col, hill, edge * (1.0 - depth * 0.85));\n      }\n    }\n  }\n\n  col *= uExposure * (1.0 + uFlash * 0.07);\n  vec3 out8 = aces(col);\n  out8 += (ign(gl_FragCoord.xy) - 0.5) / 255.0;\n  fragColor = vec4(out8, 1.0);\n}\n","env":"#version 300 es\n// A small linear picture of the sky and clouds, for the brass to reflect.\nprecision highp float;\nprecision highp sampler2D;\nin vec2 vUv;\nout vec4 fragColor;\nuniform sampler2D uSky, uClouds;\nuniform vec3 uCamF, uCamR, uCamU, uSunDir;\nuniform float uExposure;\nconst float PI = 3.14159265;\nvec2 skyUv(vec3 d) {\n  vec2 a = normalize(d.xz), s = normalize(uSunDir.xz);\n  float az = acos(clamp(dot(a, s), -1.0, 1.0));\n  float el = asin(clamp(d.y, -1.0, 1.0));\n  float v = sign(el) * sqrt(abs(el) / (PI * 0.5));\n  return vec2(sqrt(az / PI), v * 0.5 + 0.5);\n}\nvoid main() {\n  vec2 ndc = vUv * 2.0 - 1.0;\n  vec3 rd = normalize(uCamF + uCamR * ndc.x + uCamU * ndc.y);\n  vec3 sky = texture(uSky, skyUv(rd)).rgb;\n  vec4 c = texture(uClouds, vUv);\n  fragColor = vec4((sky * c.a + c.rgb) * uExposure, 1.0);\n}\n","march":"#version 300 es\n// The clouds: a volumetric march through a layer whose shape comes from a height map (flat bases, heaped tops)\n// displaced by billowy 3D noise. Output is premultiplied light in RGB, transmittance in A.\nprecision highp float;\nprecision highp sampler2D;\nprecision highp sampler3D;\nin vec2 vUv;\nout vec4 fragColor;\n\nuniform sampler3D uShape, uDetail;\nuniform sampler2D uWeather, uCover, uSky, uBust, uBlue;\nuniform vec4  uSlot[4];\nuniform int   uBustOn, uErodeOn;\nuniform vec3  uCamF, uCamR, uCamU, uSunDir, uLightDir, uSunCol, uAmbUp, uAmbDown, uAmbGround, uGlow;\nuniform vec2  uWind, uFrameOff, uTexel;\nuniform float uTime, uFrame, uCamY, uBase, uThick, uMap, uFog, uDensity, uLightDen, uHazeGain, uN;\n\n#ifndef MAX_STEPS\n#define MAX_STEPS 128\n#endif\n#ifndef LIGHT_STEPS\n#define LIGHT_STEPS 5\n#endif\n\nconst float PI = 3.14159265;\nconst float T_MAX = 62.0;\nconst float SHAPE_PERIOD = 15.0, DETAIL_PERIOD = 2.3;\n\nfloat sat(float x) { return clamp(x, 0.0, 1.0); }\nfloat hg(float c, float g) { float g2 = g * g; return (1.0 - g2) / (4.0 * PI * pow(1.0 + g2 - 2.0 * g * c, 1.5)); }\n\nvec2 skyUv(vec3 d) {\n  vec2 a = normalize(d.xz), s = normalize(uSunDir.xz);\n  float az = acos(clamp(dot(a, s), -1.0, 1.0));\n  float el = asin(clamp(d.y, -1.0, 1.0));\n  float v = sign(el) * sqrt(abs(el) / (PI * 0.5));\n  return vec2(sqrt(az / PI), v * 0.5 + 0.5);\n}\n\n// Signed distance-like field in km: positive inside the cloud.\n// The map stores, for spherical heaps, the potential P = T^2(1 - r^2/R^2) and a smooth local height T,\n// so (P - y^2) / 2T behaves like a true distance on the tops and the flanks alike, and noise can push the\n// surface outward in any direction. fine=false skips the smallest detail, for light rays.\nstruct Sample { float sd; float den; float inner; float heat; float cav; };\n\n// Erosion, heat and drift at a point. Slots are flat atlases of 16 layers, 64 texels square.\nvec4 bustAt(vec2 q, float y) {\n  for (int i = 0; i < 4; i++) {\n    vec4 sl = uSlot[i];\n    if (sl.w < 0.5) continue;\n    vec2 d = q - sl.xy;\n    d -= uMap * floor(d / uMap + 0.5);\n    vec2 uv = d / (2.0 * sl.z) + 0.5;\n    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) continue;\n    vec2 rim = min(uv, 1.0 - uv);          // die away before the volume's own edge, or its square shows\n    float z = clamp((y + 0.2) / (uThick + 0.6), 0.0, 1.0) * 16.0 - 0.5;\n    float k0 = clamp(floor(z), 0.0, 15.0), k1 = min(k0 + 1.0, 15.0), f = clamp(z - k0, 0.0, 1.0);\n    vec2 inner = clamp(uv, vec2(0.5 / 64.0), vec2(63.5 / 64.0)) * 64.0;\n    vec2 base = vec2(float(i & 1), float(i >> 1)) * 256.0;\n    vec2 a = base + vec2(mod(k0, 4.0), floor(k0 / 4.0)) * 64.0 + inner;\n    vec2 b = base + vec2(mod(k1, 4.0), floor(k1 / 4.0)) * 64.0 + inner;\n    return mix(textureLod(uBust, a / 512.0, 0.0), textureLod(uBust, b / 512.0, 0.0), f) * smoothstep(0.0, 0.12, min(rim.x, rim.y));\n  }\n  return vec4(0.0);\n}\n\n\nSample field(vec3 p, bool fine, float lod, float px) {\n  Sample s; s.sd = -1.0; s.den = 0.0; s.inner = 0.0; s.heat = 0.0; s.cav = 0.5;\n  vec2 uv = (p.xz + uWind) / uMap;\n  vec2 w = textureLod(uWeather, uv, 0.0).rg;\n  float y = p.y - uBase;\n  float T = max(w.g, 0.3), yy = max(y, 0.0);\n  float sdTop = (w.r - yy * yy) / (2.0 * T);\n  float sd0 = min(sdTop, y * 2.4 + 0.3);\n  float amp = (0.26 * T + 0.2) * (0.3 + 0.7 * smoothstep(0.0, 0.8, y));\n  if (sd0 < -amp * 1.15) { s.sd = sd0 * min(1.0, T) + amp * 1.15; return s; }\n  float shell = sd0;\n\n  float erode = uErodeOn > 0 ? textureLod(uCover, uv, 0.0).g : 0.0;\n  vec3 q = vec3(p.x + uWind.x, p.y - uTime * 0.012, p.z + uWind.y);\n  float wispy = 0.0;\n  if (uBustOn > 0) {\n    vec4 b = bustAt(vec2(p.x + uWind.x, p.z + uWind.y), y);\n    erode = max(erode, b.r);\n    s.heat = b.g;\n    q.xy -= b.ba;          // the noise is carried along with the moving air\n  }\n  if (erode > 0.01) {\n    // Where a cloud is coming apart, swirl the noise on itself: domain-warped noise makes smoke-like tendrils\n    wispy = smoothstep(0.02, 0.45, erode);\n    q += vec3(erode * 1.4, -erode * 0.5, 0.0);     // what is let go slides away down the wind, and lifts a little\n    vec4 sw = textureLod(uDetail, q / 7.3 + vec3(0.0, uTime * 0.004, 0.0), 1.0);\n    vec3 w1 = (sw.rgb - 0.5) * vec3(1.0, 0.8, 1.0);\n    q += w1 * wispy * 1.5;\n    if (fine) {\n      vec4 sw2 = textureLod(uDetail, q / 3.1 - vec3(uTime * 0.006, 0.0, 0.0), 2.0);\n      q += (sw2.gbr - 0.5) * wispy * 0.6;\n    }\n  }\n  vec4 n = textureLod(uShape, q / SHAPE_PERIOD, 0.0);\n  float bill = n.g * 0.38 + n.b * 0.36 + n.a * 0.26;\n  float nn = (bill - 0.475) * 3.1 + (n.r - 0.5) * 0.9;\n  sd0 = min(sdTop, (y + (n.r - 0.5) * 0.2 + (n.b - 0.5) * 0.12) * 2.4 + 0.04);     // bases are level, but never ruled flat\n  float sd = sd0 + amp * nn * (1.0 + wispy * 0.8);\n  float soft = clamp(px * 5.0, 0.025, 0.06) + 0.3 * wispy, thin = 1.0, close = 0.0;\n  float det = 0.5, ridge = 0.7;\n  bool nearSkin = sd > -0.12 && sd < 0.4;\n  if (fine && (nearSkin || erode > 0.003)) {\n    vec4 dn = textureLod(uDetail, q / DETAIL_PERIOD, lod + wispy * 1.4);\n    det = dn.r * 0.6 + dn.g * 0.28 + dn.b * 0.12;\n    ridge = 1.0 - abs(dn.a * 2.0 - 1.0);\n    if (px < 0.02 && nearSkin) {            // a cloud close overhead shows one more generation of billows\n      vec4 dc = textureLod(uDetail, q / 0.83, 0.0);\n      close = (dc.r * 0.6 + dc.g * 0.4 - 0.5) * (1.0 - smoothstep(0.008, 0.02, px));\n    }\n  }\n  float skin = ((det - 0.5) * 0.7 + close * 0.17) * (0.45 + 0.55 * sat(y / 0.7));\n  if (erode > 0.003) {\n    if (fine) {\n      // Loosened cloud is drawn out by the wind: softer noise, stretched along the breeze, makes strands instead of grains\n      vec4 st = textureLod(uDetail, q * vec3(0.34, 1.1, 0.7) / DETAIL_PERIOD, 1.2);\n      float strands = st.r * 0.6 + st.g * 0.4;\n      det = mix(det, strands, wispy * 0.8);\n      ridge = mix(ridge, 1.0 - abs(st.a * 2.0 - 1.0), wispy);\n    }\n    // Every spot has its own moment to let go, set by the billows and their finer detail: valleys first, crowns last.\n    // Inside the band that is letting go the cloud's depth is forgotten and only the noise decides what stays,\n    // so a growing gap is edged with lace and scraps rather than a smooth wall.\n    float moment = 0.06 + 0.86 * sat((mix(bill, det, fine ? 0.62 : 0.0) - 0.22) / 0.56);\n    float gate = smoothstep(moment - 0.22, moment + 0.3, erode * 1.3);\n    float deep = max(sd, 0.0) / (1.0 + max(sd, 0.0));\n    float rim = smoothstep(-amp * 1.1, amp * 0.3, shell);     // lace thins toward the cloud's old outline, which must not show as a shell\n    float lace = deep * (1.0 - gate) * 0.4 + (det - 0.5) * (0.6 + 0.6 * gate) - gate * 0.42 + (ridge - 0.7) * 0.4 * wispy - (1.0 - rim) * 0.5;\n    sd = mix(sd + skin, lace, smoothstep(0.0, 0.12, gate));\n    thin = 1.0 - 0.8 * gate;       // what is left in a gap is vapour, not flakes of cloud\n  } else sd += skin;\n  s.sd = sd;\n  s.den = smoothstep(0.0, soft, sd) * thin * (1.0 - 0.7 * wispy * (1.0 - smoothstep(0.42, 0.68, det)));\n  s.inner = sat((T - y) / T);\n  s.cav = sat(0.5 + nn * 0.75 + (det - 0.5) * 1.5 + close * 1.3);     // crowns stand out into the sky, valleys sit in their own shade\n  return s;\n}\n\nfloat sunDepth(vec3 p, float j) {\n  float od = 0.0, d = 0.03 + 0.05 * j, prev = 0.0;\n  for (int i = 0; i < LIGHT_STEPS; i++) {\n    float seg = d - prev;\n    Sample s = field(p + uLightDir * d, i < 2, 0.5, 0.03);\n    od += s.den * seg;\n    prev = d;\n    d *= 2.15;\n  }\n  return od * uLightDen;\n}\n\nvoid main() {\n  vec2 px = floor(gl_FragCoord.xy) * uN + uFrameOff + 0.5;     // the history pixel this ray refreshes\n  vec2 ndc = px * uTexel * 2.0 - 1.0;\n  vec3 rd = normalize(uCamF + uCamR * ndc.x + uCamU * ndc.y);\n  vec3 ro = vec3(0.0, uCamY, 0.0);\n  fragColor = vec4(0.0, 0.0, 0.0, 1.0);\n  if (rd.y < 0.0015) return;\n  float t0 = max(0.0, (uBase - 0.1 - ro.y) / rd.y);\n  float t1 = min(T_MAX, (uBase + uThick + 0.9 - ro.y) / rd.y);\n  if (t0 >= t1) return;\n\n  float c = dot(rd, uLightDir);\n  float ph0 = mix(hg(c, 0.78), hg(c, -0.28), 0.32);\n  float ph1 = mix(hg(c, 0.45), hg(c, -0.14), 0.4);\n  float ph2 = hg(c, 0.12);\n  // Blue noise stepped by the golden ratio each visit, so accumulation sees fresh, evenly spread samples\n  float visit = floor(uFrame / (uN * uN));\n  ivec2 bp = ivec2(px);\n  float noiseA = fract(texelFetch(uBlue, bp & 63, 0).r + visit * 0.61803399);\n  float noiseB = fract(texelFetch(uBlue, (bp + ivec2(23, 41)) & 63, 0).r + visit * 0.75487767);\n\n  vec3 L = vec3(0.0);\n  float T = 1.0, tSum = 0.0, wSum = 0.0;\n  float t = t0, stride = 0.0;\n  int quiet = 0;\n  float refine = 1.0;\n  bool striding = true;\n  t += noiseA * clamp(t * 0.016, 0.06, 0.5);\n  for (int i = 0; i < MAX_STEPS && t < t1 && T > 0.015; i++) {\n    float ds = clamp(t * 0.016, 0.06, 0.5) * refine;\n    if (i * 3 > MAX_STEPS * 2) ds = max(ds, (t1 - t) / float(MAX_STEPS - i));   // late in the budget, make sure of reaching the far end\n    vec3 p = ro + rd * t;\n    vec2 uv = (p.xz + uWind) / uMap;\n    float cover = textureLod(uCover, uv, 0.0).r;\n    if (cover < 0.01) { t += max(ds * 3.0, 0.5); continue; }\n    Sample s = field(p, true, clamp(log2(t * 0.0017 / 0.036), 0.0, 3.0), t * 0.0017);\n    if (s.sd < -0.2) { stride = clamp(-s.sd * 0.55, ds, 0.7); t += stride; refine = 1.0; striding = true; continue; }     // the field is distance-like: stride through open air\n    if (striding) { striding = false; t += noiseA * ds - stride * 0.8; continue; }     // step back, a long stride may have landed past the skin; fresh jitter, or surfaces show contour lines\n    refine = s.sd > -0.08 ? 0.42 : 1.0;      // tread lightly near a surface\n    if (s.den > 0.002) {\n      float sigma = s.den * uDensity;\n      float tau = sunDepth(p, noiseB);\n      float e0 = exp(-tau), e1 = exp(-tau * 0.42), e2 = exp(-tau * 0.17);\n      float direct = e0 * ph0 + 0.34 * e1 * ph1 + 0.16 * e2 * ph2;\n      direct *= mix(0.72, 1.0, 1.0 - exp(-tau * 2.5 - 0.15));     // a soft powder darkening in crevices\n      float inner = s.inner;\n      vec3 amb = mix(uAmbDown, uAmbUp, 1.0 - inner * 0.8) * (0.55 + 0.45 * sat(1.0 - s.sd / 0.7));\n      amb *= mix(0.5, 1.3, s.cav);\n      float low = sat(1.0 - (p.y - uBase) / 0.6);\n      amb += uAmbGround * low * 0.35;\n      vec3 S = uSunCol * direct + amb + uGlow * s.heat * s.heat * 0.035;\n      float tr = exp(-sigma * ds);\n      float a = 1.0 - tr;\n      L += T * S * a;\n      tSum += t * T * a; wSum += T * a;\n      T *= tr;\n    }\n    t += ds;\n  }\n  if (wSum > 0.0) {\n    float tAvg = tSum / wSum;\n    float fog = 1.0 - exp(-tAvg * uFog);\n    vec3 dh = normalize(vec3(rd.x, max(rd.y, 0.015) * 0.5, rd.z));\n    vec3 haze = texture(uSky, skyUv(dh)).rgb * uHazeGain;\n    L = mix(L, haze * (1.0 - T), fog);\n  }\n  fragColor = vec4(L, T);\n}\n","noise3d":"#version 300 es\n// Bakes one slice of tiling 3D noise. uKind 0: billow shape volume. uKind 1: fine detail volume.\nprecision highp float;\nprecision highp int;\nin vec2 vUv;\nout vec4 fragColor;\nuniform float uZ;     // slice position 0..1\nuniform int uKind;\n\nvec3 hash(vec3 p) {\n  uvec3 q = uvec3(ivec3(p)) * uvec3(1597334673U, 3812015801U, 2798796415U);\n  q = (q.x ^ q.y ^ q.z) * uvec3(1597334673U, 3812015801U, 2798796415U);\n  return vec3(q) / 4294967295.0;\n}\n// Tiling Worley noise, inverted: 1 at feature points, so each cell is a round puff.\nfloat worley(vec3 p, float freq) {\n  vec3 q = p * freq, id = floor(q), f = fract(q);\n  float best = 1e9;\n  for (int z = -1; z <= 1; z++) for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {\n    vec3 c = vec3(x, y, z);\n    vec3 r = c + hash(mod(id + c, freq)) - f;\n    best = min(best, dot(r, r));\n  }\n  return 1.0 - clamp(best, 0.0, 1.0);    // squared distance: rounded domes meeting in sharp creases, like cauliflower\n}\nfloat perlin(vec3 p, float freq) {\n  vec3 q = p * freq, id = floor(q), f = fract(q);\n  vec3 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);\n  float n[8];\n  for (int i = 0; i < 8; i++) {\n    vec3 c = vec3(float(i & 1), float((i >> 1) & 1), float((i >> 2) & 1));\n    vec3 g = normalize(hash(mod(id + c, freq)) * 2.0 - 1.0 + 1e-4);\n    n[i] = dot(g, f - c);\n  }\n  float x0 = mix(n[0], n[1], u.x), x1 = mix(n[2], n[3], u.x);\n  float x2 = mix(n[4], n[5], u.x), x3 = mix(n[6], n[7], u.x);\n  return mix(mix(x0, x1, u.y), mix(x2, x3, u.y), u.z) * 1.15 + 0.5;\n}\nfloat worleyFbm(vec3 p, float f) {\n  float v = worley(p, f) * 0.6 + worley(p, f * 2.0) * 0.27 + worley(p, f * 4.0) * 0.13;\n  return clamp((v - 0.74) / 0.38 + 0.5, 0.0, 1.0);\n}\n\nvoid main() {\n  vec3 p = vec3(vUv, uZ);\n  // A slight tiling warp so cells do not read as spheres\n  p += (vec3(perlin(p + 0.31, 5.0), perlin(p + 0.57, 5.0), perlin(p + 0.83, 5.0)) - 0.5) * 0.045;\n  if (uKind == 0) {\n    float pf = perlin(p, 4.0) * 0.6 + perlin(p, 8.0) * 0.28 + perlin(p, 16.0) * 0.12;\n    float wf = worleyFbm(p, 4.0);\n    float pw = clamp(wf + (pf - 0.5) * 0.8, 0.0, 1.0);     // Perlin-Worley: cells with a soft fractal skin\n    fragColor = vec4(pw, worleyFbm(p, 3.0), worleyFbm(p, 7.0), worleyFbm(p, 13.0));\n  } else {\n    fragColor = vec4(worleyFbm(p, 4.0), worleyFbm(p, 7.0), worleyFbm(p, 12.0), perlin(p, 6.0) * 0.6 + perlin(p, 12.0) * 0.4);\n  }\n}\n","rays":"#version 300 es\n// Sun shafts: from each point, look back along the screen toward the sun and see how clear the way is.\n// Works with the sun off screen too, and at very low resolution.\nprecision highp float;\nprecision highp sampler2D;\nin vec2 vUv;\nout vec4 fragColor;\nuniform sampler2D uClouds, uBlue, uHist;\nuniform vec2 uSunUv;\nuniform float uFrame;\nconst int N = 12;\nvoid main() {\n  float j = fract(texelFetch(uBlue, ivec2(gl_FragCoord.xy) & 63, 0).r + uFrame * 0.61803399);\n  vec2 dv = (uSunUv - vUv) * (0.9 / float(N));\n  vec2 p = vUv + dv * j;\n  float sum = 0.0, w = 1.0, total = 0.0;\n  for (int i = 0; i < N; i++) {\n    vec2 q = clamp(p, vec2(0.002), vec2(0.998));\n    sum += textureLod(uClouds, q, 0.0).a * w;\n    total += w;\n    w *= 0.93;\n    p += dv;\n  }\n  float v = sum / total;\n  float prev = texture(uHist, vUv).r;\n  fragColor = vec4(mix(prev, v, 0.12));\n}\n","resolve":"#version 300 es\n// Temporal accumulation. The camera never moves and clouds drift slowly, so only some pixels are marched each frame\n// and everything else is carried forward. uCell picks which pixels of each NxN block are fresh this frame.\nprecision highp float;\nprecision highp sampler2D;\nin vec2 vUv;\nout vec4 fragColor;\nuniform sampler2D uHist, uNew;\nuniform ivec2 uCell;\nuniform int uN;\nuniform float uBlend;\nvoid main() {\n  ivec2 px = ivec2(gl_FragCoord.xy);\n  vec4 h = texelFetch(uHist, px, 0);\n  if (px.x % uN == uCell.x && px.y % uN == uCell.y) {\n    vec4 n = texelFetch(uNew, px / uN, 0);\n    fragColor = mix(h, n, uBlend);\n  } else {\n    fragColor = h;\n  }\n}\n","skylut":"#version 300 es\n// Sky radiance as a function of (angle from the sun's azimuth, elevation). Single scattering plus a\n// gentle multiple-scatter term. Recomputed only when the sun moves.\nprecision highp float;\nprecision highp sampler2D;\nin vec2 vUv;\nout vec4 fragColor;\nuniform float uSunEl;      // radians\nuniform vec3  uRayleigh;   // km^-1, x1000 removed below\nuniform float uMie, uMieG, uOzone, uMsBoost, uGlowK, uNight;\nuniform vec3  uGlow;      // painter's touch: a low band of colour around the whole horizon\n\nconst float PI = 3.14159265, Rg = 6360.0, Rt = 6460.0;\nconst vec3 OZONE = vec3(0.650, 1.881, 0.085) * 1e-3;\n\nvec2 sphere(vec3 o, vec3 d, float r) {\n  float b = dot(o, d), c = dot(o, o) - r * r, h = b * b - c;\n  if (h < 0.0) return vec2(-1.0);\n  h = sqrt(h);\n  return vec2(-b - h, -b + h);\n}\nvec3 extinctionAt(float h, float k) {\n  float r = exp(-h / 8.0), m = exp(-h / 1.2);\n  float o = max(0.0, 1.0 - abs(h - 25.0) / 15.0);\n  return uRayleigh * r * 1e-3 + vec3(uMie * 1e-3 * 1.11) * m + OZONE * o * uOzone * k;\n}\nvec3 opticalToSun(vec3 p, vec3 s) {\n  vec2 t = sphere(p, s, Rt);\n  if (t.y <= 0.0) return vec3(0.0);\n  vec2 g = sphere(p, s, Rg + 0.01);\n  if (g.x > 0.0) return vec3(1e3);\n  float dt = t.y / 6.0;\n  vec3 sum = vec3(0.0);\n  for (int i = 0; i < 6; i++) {\n    float h = length(p + s * dt * (float(i) + 0.5)) - Rg;\n    sum += extinctionAt(h, 1.0);\n  }\n  return sum * dt;\n}\nvoid main() {\n  float az = vUv.x * vUv.x * PI;\n  float v = vUv.y * 2.0 - 1.0;\n  float el = sign(v) * v * v * PI * 0.5;\n  vec3 d = vec3(sin(az) * cos(el), sin(el), -cos(az) * cos(el));\n  vec3 s = vec3(0.0, sin(uSunEl), -cos(uSunEl));\n  vec3 o = vec3(0.0, Rg + 0.05, 0.0);\n  vec2 tA = sphere(o, d, Rt), tG = sphere(o, d, Rg);\n  float tMax = tG.x > 0.0 ? tG.x : tA.y;\n  float dt = tMax / 18.0;\n  vec3 odView = vec3(0.0), ray = vec3(0.0), mie = vec3(0.0);\n  for (int i = 0; i < 18; i++) {\n    vec3 p = o + d * dt * (float(i) + 0.5);\n    float h = length(p) - Rg;\n    vec3 ext = extinctionAt(h, 1.0);\n    odView += ext * dt * 0.5;\n    vec3 tr = exp(-(odView + opticalToSun(p, s)));\n    ray += tr * exp(-h / 8.0) * dt;\n    mie += tr * exp(-h / 1.2) * dt;\n    odView += ext * dt * 0.5;\n  }\n  float c = dot(d, s);\n  float pr = 3.0 / (16.0 * PI) * (1.0 + c * c);\n  float g = uMieG, g2 = g * g;\n  float pm = 3.0 / (8.0 * PI) * (1.0 - g2) * (1.0 + c * c) / ((2.0 + g2) * pow(1.0 + g2 - 2.0 * g * c, 1.5));\n  vec3 L = ray * uRayleigh * 1e-3 * pr + mie * uMie * 1e-3 * pm;\n  // Second-order light: a soft lift so twilight colours stay luminous instead of falling to black.\n  float sunUp = smoothstep(-0.22, 0.25, sin(uSunEl));\n  vec3 ms = (uRayleigh / 33.0) * mix(0.0009, 0.0075, sunUp) * uMsBoost;\n  L += ms * (0.6 + 0.4 * exp(-max(d.y, 0.0) * 2.0));\n  L *= 20.0;                           // 20: the sun's irradiance\n  float low = exp(-max(d.y, 0.0) * uGlowK);\n  L += uGlow * low * (0.55 + 0.45 * (0.5 + 0.5 * cos(az)));\n  L += uNight * mix(vec3(0.03, 0.042, 0.088), vec3(0.008, 0.014, 0.042), smoothstep(0.0, 0.55, d.y));    // a moonlit sky, not a black one\n  fragColor = vec4(L, 1.0);\n}\n"};
+CB.GLSL = {"bustsim":"#version 300 es\n// The dissipation field. A small volume around each cloud being worked on, kept in a flat atlas.\n// r: erosion, how much of the cloud is gone here.  g: heat from the beam, spreads and fades.\n// b,a: drift of the material sideways and upward, in km, which pulls the noise out into wisps.\nprecision highp float;\nprecision highp sampler2D;\nprecision highp sampler3D;\nin vec2 vUv;\nout vec4 fragColor;\nuniform sampler2D uPrev;\nuniform sampler3D uShape;\nuniform vec4  uSlot[4];        // centre x, z (cloud frame, km), half width (km), 1 if live, 2 if handing over\nuniform vec3  uBeamO, uBeamD;  // beam ray in cloud frame\nuniform vec4  uBeam;           // t start, t end, angular radius (tan), power\nuniform float uDt, uTime, uMap, uTop;\n\nconst float TILE = 64.0, SLOT = 256.0;\nconst int LAYERS = 16;\n\nivec2 texelOf(int slot, int k, ivec2 ij) {\n  return ivec2((slot & 1) * 256 + (k & 3) * 64 + ij.x, ((slot >> 1) & 1) * 256 + (k >> 2) * 64 + ij.y);\n}\nvec4 at(int slot, int k, ivec2 ij) {\n  ij = clamp(ij, ivec2(0), ivec2(63));\n  k = clamp(k, 0, LAYERS - 1);\n  return texelFetch(uPrev, texelOf(slot, k, ij), 0);\n}\n// Smooth pseudo-curl swirl from a few sines, cheap and never repeating visibly\nvec2 swirl(vec3 p, float t) {\n  float a = sin(p.y * 1.7 + t * 0.21 + sin(p.x * 0.9 - t * 0.13) * 1.6) + sin(p.z * 1.1 + p.y * 0.6 - t * 0.17);\n  float b = sin(p.x * 1.9 - t * 0.19 + cos(p.y * 1.3 + t * 0.15) * 1.4) + cos(p.z * 0.8 - p.x * 0.7 + t * 0.11);\n  float c = sin((p.x + p.y) * 4.1 + t * 0.4) * 0.35;\n  return vec2(a + c, -b + c);\n}\n\nvoid main() {\n  ivec2 px = ivec2(gl_FragCoord.xy);\n  int slot = (px.x >= 256 ? 1 : 0) + (px.y >= 256 ? 2 : 0);\n  vec4 sl = uSlot[slot];\n  fragColor = vec4(0.0);\n  if (sl.w < 0.5) return;\n  ivec2 local = px % 256;\n  ivec2 ij = local % 64;\n  int k = (local.x / 64) + (local.y / 64) * 4;\n\n  vec4 s = at(slot, k, ij);\n  vec4 xm = at(slot, k, ij + ivec2(-1, 0)), xp = at(slot, k, ij + ivec2(1, 0));\n  vec4 zm = at(slot, k, ij + ivec2(0, -1)), zp = at(slot, k, ij + ivec2(0, 1));\n  vec4 ym = at(slot, k - 1, ij), yp = at(slot, k + 1, ij);\n\n  // World position of this voxel, cloud frame\n  vec2 uv = (vec2(ij) + 0.5) / TILE;\n  float y = (float(k) + 0.5) / float(LAYERS) * uTop - 0.2;\n  vec3 P = vec3(sl.x + (uv.x - 0.5) * 2.0 * sl.z, y, sl.y + (uv.y - 0.5) * 2.0 * sl.z);\n\n  // Patchy: some parts of a cloud give way sooner, so it never dissolves as a uniform fade\n  vec4 n = textureLod(uShape, vec3(P.x, P.y * 1.3, P.z) / 9.0, 0.0);\n  float patchy = 0.45 + 1.1 * smoothstep(0.3, 0.72, n.r * 0.6 + n.b * 0.4);\n\n  // Heat spreads, rises a little and leans down the wind. It creeps faster along some paths than others,\n  // so a gap opens in an uneven shape rather than a circle.\n  float q = s.g;\n  float avg = (xm.g * 0.75 + xp.g * 1.25 + zm.g + zp.g + ym.g * 1.2 + yp.g * 0.8) / 6.0;\n  float creep = 0.25 + 1.5 * smoothstep(0.34, 0.62, textureLod(uShape, P / 4.3, 0.0).g);\n  q += (avg - q) * min(0.85, uDt * 11.0 * creep);\n  q *= exp(-uDt * 0.5);\n\n  // The beam\n  vec3 w = P - uBeamO;\n  w.xz -= uMap * floor(w.xz / uMap + 0.5);\n  float t = dot(w, uBeamD);\n  vec3 toAxis = w - uBeamD * t;\n  float r = max(0.22, t * uBeam.z);\n  float d2 = dot(toAxis, toAxis) / (r * r);\n  float band = smoothstep(uBeam.x - 0.5, uBeam.x, t) * (1.0 - smoothstep(uBeam.y, uBeam.y + 0.8, t));\n  q += uBeam.w * band * exp(-d2) * uDt * 1.3;\n  q = min(q, 1.2);\n\n  // Erosion follows heat, then slowly heals so a part-worked cloud can knit itself back\n  float e = s.r;\n  e += q * patchy * uDt * 0.13;\n  e -= (0.012 + 0.03 * e) * uDt * (1.0 - smoothstep(0.0, 0.12, q));\n  e -= (sl.w - 1.0) * uDt * 0.4;     // handing over: the hole closes in a couple of seconds\n  e = clamp(e, 0.0, 1.0);\n\n  // Material is pushed out from the hot core and curls as it goes; slowly relaxes back\n  vec2 grad = vec2(xm.g - xp.g, ym.g - yp.g);\n  vec2 sw = swirl(P * 1.0, uTime);\n  vec2 v = grad * 1.6 + sw * q * 0.1 + vec2(0.0, q * 0.03);\n  vec2 drift = s.ba + v * uDt;\n  drift *= exp(-uDt * 0.08);\n  fragColor = vec4(e, q, clamp(drift, vec2(-1.2), vec2(1.2)));\n}\n","composite":"#version 300 es\n// Final picture: sky, sun, high cirrus, clouds, far hills, tone map, dither.\nprecision highp float;\nprecision highp sampler2D;\nprecision highp sampler3D;\nin vec2 vUv;\nout vec4 fragColor;\nuniform sampler2D uSky, uClouds, uRays, uWeather;\nuniform sampler3D uShape;\nuniform vec3  uCamF, uCamR, uCamU, uSunDir, uMoonDir, uSunCol, uSunGround, uHorizonTint, uBeamTint;\nuniform vec2  uCloudSize, uWind;\nuniform float uTime, uExposure, uStars, uCirrus, uRayGain, uAspect, uMap, uMoon;\nuniform vec4  uBlooms[4];   // each opening keeps its own position and slowly fading light\nuniform vec4  uBeamLine;    // muzzle xy, aim point xy, in 0..1 screen space\nuniform vec3  uBeamInfo;    // strength 0..1, width at the muzzle (fraction of screen height), aspect\nuniform vec4  uFlock;       // centre xy in screen heights, bird half-span, strength\n\nconst float PI = 3.14159265;\nfloat sat(float x) { return clamp(x, 0.0, 1.0); }\nfloat hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat ign(vec2 p) { return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)))); }\n\nvec2 skyUv(vec3 d) {\n  vec2 a = normalize(d.xz), s = normalize(uSunDir.xz);\n  float az = acos(clamp(dot(a, s), -1.0, 1.0));\n  float el = asin(clamp(d.y, -1.0, 1.0));\n  float v = sign(el) * sqrt(abs(el) / (PI * 0.5));\n  return vec2(sqrt(az / PI), v * 0.5 + 0.5);\n}\nvec3 aces(vec3 c) {\n  c *= 0.82;\n  c = (c * (2.51 * c + 0.03)) / (c * (2.43 * c + 0.59) + 0.14);\n  return pow(clamp(c, 0.0, 1.0), vec3(1.0 / 2.2));\n}\n// Catmull-Rom in five taps: keeps cloud edges crisp when the buffer is smaller than the screen.\nvec4 sampleSharp(sampler2D t, vec2 uv, vec2 size) {\n  vec2 p = uv * size - 0.5, i = floor(p), f = p - i;\n  vec2 w0 = f * (-0.5 + f * (1.0 - 0.5 * f));\n  vec2 w1 = 1.0 + f * f * (-2.5 + 1.5 * f);\n  vec2 w2 = f * (0.5 + f * (2.0 - 1.5 * f));\n  vec2 w3 = f * f * (-0.5 + 0.5 * f);\n  vec2 w12 = w1 + w2, off = w2 / w12;\n  vec2 p0 = (i - 0.5) / size, p3 = (i + 2.5) / size, p12 = (i + 0.5 + off) / size;\n  vec4 r = vec4(0.0);\n  r += textureLod(t, vec2(p12.x, p0.y), 0.0) * w12.x * w0.y;\n  r += textureLod(t, vec2(p0.x, p12.y), 0.0) * w0.x * w12.y;\n  r += textureLod(t, p12, 0.0) * w12.x * w12.y;\n  r += textureLod(t, vec2(p3.x, p12.y), 0.0) * w3.x * w12.y;\n  r += textureLod(t, vec2(p12.x, p3.y), 0.0) * w12.x * w3.y;\n  float n = w12.x * w0.y + w0.x * w12.y + w12.x * w12.y + w3.x * w12.y + w12.x * w3.y;\n  return r / n;\n}\nfloat hillLine(float x, float s) {\n  return sin(x * 1.3 + s) * 0.5 + sin(x * 2.9 + s * 2.1) * 0.27 + sin(x * 6.1 + s * 0.7) * 0.13 + sin(x * 13.7 + s * 3.3) * 0.05;\n}\n// The shimmer: a slender shaft of disturbed air that narrows to the aim point, as parallel lines do in perspective.\n// Returns a sideways nudge for the picture behind it, and how much soft light it carries.\nvec3 shimmer(vec2 uv) {\n  if (uBeamInfo.x < 0.004) return vec3(0.0);\n  float asp = uBeamInfo.z;\n  vec2 a = uBeamLine.xy * vec2(asp, 1.0), b = uBeamLine.zw * vec2(asp, 1.0), p = uv * vec2(asp, 1.0);\n  vec2 ab = b - a;\n  float len = length(ab);\n  if (len < 0.001) return vec3(0.0);\n  vec2 dir = ab / len, side = vec2(-dir.y, dir.x);\n  float u = dot(p - a, dir) / len;\n  float d = dot(p - a, side);\n  if (u < -0.02 || u > 1.06) return vec3(0.0);\n  float un = clamp(u, 0.0, 0.995);\n  float w = uBeamInfo.y * (1.0 - un) + 0.002;\n  float body = exp(-d * d / (w * w));\n  if (body < 0.002) return vec3(0.0);\n  // Depth along the shaft grows without limit toward the vanishing point, so waves bunch up as they recede\n  float s = 1.0 / (1.0 - un) - 1.0;\n  float fade = smoothstep(-0.02, 0.07, u) * (1.0 - smoothstep(0.66, 1.0, u)) * uBeamInfo.x;     // it starts at the muzzle: no cut edge behind it\n  float wave = sin(s * 5.0 - uTime * 3.2);\n  float pulse = pow(0.5 + 0.5 * sin(s * 1.3 - uTime * 1.4), 4.0);\n  float nudge = sin(d / w * 2.4) * (0.6 + 0.4 * wave) * body * fade * w * 0.5;\n  float glow = body * fade * (0.09 + 0.24 * pulse);\n  return vec3(side * nudge / vec2(asp, 1.0), glow);\n}\n\n// A few distant birds, seen only as the curve of their wings.\nfloat birds(vec2 p) {\n  float size = uFlock.z, a = 0.0;\n  vec2 d = p - uFlock.xy;\n  if (abs(d.x) > size * 9.0 || abs(d.y) > size * 5.0) return 0.0;\n  for (int i = 0; i < 9; i++) {\n    float fi = float(i);\n    vec2 o = vec2(hash(vec2(fi, 1.3)) - 0.5, hash(vec2(fi, 4.7)) - 0.5) * vec2(11.0, 5.0);\n    o += vec2(sin(uTime * 0.17 + fi * 2.1), cos(uTime * 0.13 + fi * 1.3)) * 0.5;\n    vec2 q = (d - o * size) / size;\n    float x = abs(q.x);\n    if (x > 1.0 || abs(q.y) > 1.0) continue;\n    float beat = sin(uTime * (4.6 + hash(vec2(fi, 9.1))) + fi * 1.7);\n    float glide = smoothstep(-0.2, 0.5, sin(uTime * 0.31 + fi * 2.7));\n    float lift = mix(0.1, 0.55 * beat + 0.1, glide);\n    float wing = lift * x * (1.7 - x) - 0.1 * x * x;\n    float th = mix(0.15, 0.03, x);\n    a = max(a, (1.0 - smoothstep(th - 0.02, th + 0.1, abs(q.y - wing))));\n  }\n  return a * uFlock.w;\n}\n\nvoid main() {\n  vec3 sh = shimmer(vUv);\n  vec2 uvIn = vUv + sh.xy;\n  vec2 ndc = uvIn * 2.0 - 1.0;\n  vec3 rd = normalize(uCamF + uCamR * ndc.x + uCamU * ndc.y);\n  vec3 sky = texture(uSky, skyUv(vec3(rd.x, max(rd.y, -0.02), rd.z))).rgb;\n\n  // Sun disc and its bright aureole\n  float c = dot(rd, uSunDir);\n  float ang = acos(clamp(c, -1.0, 1.0));\n  sky += uSunCol * ((1.0 - smoothstep(0.0085, 0.0105, ang)) * 12.0 + exp(-ang * 38.0) * 0.12 + exp(-ang * 9.0) * 0.009);\n\n  // The moon, a little larger than life, with a faint ring of light in the thin air around it\n  if (uMoon > 0.003) {\n    float m = acos(clamp(dot(rd, uMoonDir), -1.0, 1.0));\n    vec3 side = normalize(cross(uMoonDir, vec3(0.0, 1.0, 0.0))), upward = cross(side, uMoonDir);\n    vec2 mq = vec2(dot(rd, side), dot(rd, upward));\n    float seas = texture(uShape, vec3(mq * 9.0, 0.37)).g;\n    float disc = 1.0 - smoothstep(0.0165, 0.0185, m);\n    sky += vec3(0.93, 0.95, 1.0) * uMoon * (disc * (0.62 + 0.7 * smoothstep(0.3, 0.62, seas)) + exp(-m * 20.0) * 0.03 + exp(-m * 5.0) * 0.008);\n  }\n\n  // Stars, once the sky is dark enough\n  if (uStars > 0.003 && rd.y > 0.0) {\n    vec2 g = vec2(atan(rd.x, -rd.z), asin(rd.y)) * 150.0;\n    vec2 id = floor(g);\n    float h = hash(id);\n    if (h > 0.986) {\n      vec2 f = fract(g) - 0.5 - (vec2(hash(id + 3.1), hash(id + 7.7)) - 0.5) * 0.7;\n      float tw = 0.75 + 0.25 * sin(uTime * (1.0 + h * 3.0) + h * 90.0);\n      sky += vec3(0.85, 0.9, 1.0) * (1.0 - smoothstep(0.0, 0.17, length(f))) * uStars * tw * (h - 0.986) * 90.0 * sat(rd.y * 6.0);\n    }\n  }\n\n  // High cirrus: a thin sheet far above the clouds, catching the light first and keeping it longest\n  if (uCirrus > 0.003 && rd.y > 0.01) {\n    vec3 hit = rd / rd.y;\n    vec2 q = hit.xz * 0.055 + uWind * 0.0011;\n    float warp = texture(uShape, vec3(q * 0.7, uTime * 0.0006)).r - 0.5;\n    vec2 streak = vec2(q.x * 0.45 + q.y * 0.15 + warp * 0.2, q.y * 1.5 - q.x * 0.2 - warp * 0.14);\n    float n0 = texture(uShape, vec3(streak, 0.31 + uTime * 0.0004)).g;\n    float n1 = texture(uShape, vec3(streak * 3.1 + 0.3, 0.61)).b;\n    float cov = smoothstep(0.6, 0.86, n0 * 0.74 + n1 * 0.26) * sat(rd.y * 3.5);\n    float forward = 0.5 + 1.6 * exp(-ang * 2.4);\n    sky = mix(sky, sky * 0.96 + uSunCol * forward * 0.03, cov * uCirrus * 0.55);\n  }\n\n  // Clouds over the sky\n  vec4 cl = sampleSharp(uClouds, uvIn, uCloudSize);\n  vec3 col = sky * clamp(cl.a, 0.0, 1.0) + max(cl.rgb, vec3(0.0));\n  col += uSunCol * sh.z * 0.14 + uBeamTint * sh.z;\n\n  // Thin cloud close to the sun takes on faint pearly colours, as real cloud edges do\n  float thin = cl.a * (1.0 - cl.a) * 4.0;\n  if (thin > 0.02 && ang < 0.9) {\n    float band = ang * 11.0 + cl.a * 7.0;\n    vec3 pearl = 0.5 + 0.5 * cos(band + vec3(0.0, 2.1, 4.2));\n    col += uSunCol * (pearl - 0.42) * thin * exp(-ang * 3.2) * 0.012;\n  }\n\n  // Light streaming between the clouds\n  if (uRayGain > 0.002) {\n    float shaft = texture(uRays, uvIn).r;\n    float reach = exp(-ang * 1.5) * uRayGain;\n    col += uSunCol * (shaft * shaft - 0.28) * reach * 0.03;\n  }\n\n  // When a large cloud opens, the light comes pouring through where it stood\n  for (int i = 0; i < 4; i++) {\n    if (uBlooms[i].z <= 0.003) continue;\n    vec2 dp = (uvIn - uBlooms[i].xy) * vec2(uAspect, 1.0);\n    float r2 = dot(dp, dp);\n    col += (uSunCol * 0.014 + vec3(0.012, 0.009, 0.005)) * uBlooms[i].z * (exp(-r2 * 8.0) + 0.2 * exp(-r2 * 1.6));\n  }\n\n  if (uFlock.w > 0.002) col = mix(col, sky * 0.2, birds(vUv * vec2(uAspect, 1.0)) * 0.85);\n\n  // The country below: fields fading into haze, with the shadows of the real clouds sailing across them\n  if (ndc.y < 0.2) {\n    float az = atan(rd.x, -rd.z);\n    float el = asin(rd.y);\n    vec3 haze = texture(uSky, skyUv(normalize(vec3(rd.x, 0.02, rd.z)))).rgb;\n    float sunHigh = max(uSunDir.y, 0.1);\n    if (rd.y < 0.06) {\n      float tg = 0.11 / max(-rd.y + 0.004, 0.003);\n      tg = min(tg, 60.0);\n      vec2 g = rd.xz / max(length(rd.xz), 0.001) * tg;\n      vec3 nq = vec3(g * 0.075, 0.31);\n      float n1 = texture(uShape, nq).g, n2 = texture(uShape, nq * vec3(3.1, 3.1, 1.0)).b;\n      vec3 field = mix(vec3(0.20, 0.25, 0.13), vec3(0.42, 0.37, 0.20), smoothstep(0.32, 0.68, n1));\n      field *= 0.72 + 0.56 * n2;\n      vec2 sp = (g + uSunDir.xz / sunHigh * 2.2 + uWind) / uMap;\n      float pot = texture(uWeather, sp).r;\n      float lit = 1.0 - 0.72 * smoothstep(-0.6, 1.0, pot);\n      vec3 ground = field * (uHorizonTint * 0.9 + uSunGround * max(uSunDir.y + 0.08, 0.0) * lit * 0.55);\n      float fog = 1.0 - exp(-tg * 0.085);\n      vec3 plain = mix(ground, haze * vec3(0.64, 0.71, 0.8), fog);\n      float blend = (1.0 - smoothstep(-0.002, 0.0, el));\n      col = mix(col, plain, blend);\n    }\n    for (int i = 0; i < 3; i++) {\n      float fi = float(i);\n      float top = 0.012 + 0.009 * fi + hillLine(az * (1.1 + fi * 0.9), 2.0 + fi * 4.3) * (0.006 + 0.0035 * fi);\n      float edge = (1.0 - smoothstep(top - 0.0007, top + 0.0007, el));\n      if (edge > 0.0) {\n        float depth = sat((top - el) / 0.03);            // ridges melt into the haze at their feet\n        float fog = 0.74 - 0.13 * fi + 0.2 * depth;\n        vec3 land = uHorizonTint * vec3(0.42, 0.5, 0.6);\n        vec3 hill = mix(land, haze * vec3(0.72, 0.78, 0.92), fog);\n        hill += uSunCol * 0.012 * smoothstep(top - 0.003, top, el) * (0.5 + 0.5 * dot(normalize(rd.xz), normalize(uSunDir.xz)));\n        col = mix(col, hill, edge * (1.0 - depth * 0.85));\n      }\n    }\n  }\n\n  float bloomLight = min(1.0, uBlooms[0].z + uBlooms[1].z + uBlooms[2].z + uBlooms[3].z);\n  col *= uExposure * (1.0 + bloomLight * 0.07);\n  vec3 out8 = aces(col);\n  out8 += (ign(gl_FragCoord.xy) - 0.5) / 255.0;\n  fragColor = vec4(out8, 1.0);\n}\n","env":"#version 300 es\n// A small linear picture of the sky and clouds, for the brass to reflect.\nprecision highp float;\nprecision highp sampler2D;\nin vec2 vUv;\nout vec4 fragColor;\nuniform sampler2D uSky, uClouds;\nuniform vec3 uCamF, uCamR, uCamU, uSunDir;\nuniform float uExposure;\nconst float PI = 3.14159265;\nvec2 skyUv(vec3 d) {\n  vec2 a = normalize(d.xz), s = normalize(uSunDir.xz);\n  float az = acos(clamp(dot(a, s), -1.0, 1.0));\n  float el = asin(clamp(d.y, -1.0, 1.0));\n  float v = sign(el) * sqrt(abs(el) / (PI * 0.5));\n  return vec2(sqrt(az / PI), v * 0.5 + 0.5);\n}\nvoid main() {\n  vec2 ndc = vUv * 2.0 - 1.0;\n  vec3 rd = normalize(uCamF + uCamR * ndc.x + uCamU * ndc.y);\n  vec3 sky = texture(uSky, skyUv(rd)).rgb;\n  vec4 c = texture(uClouds, vUv);\n  fragColor = vec4((sky * c.a + c.rgb) * uExposure, 1.0);\n}\n","march":"#version 300 es\n// The clouds: a volumetric march through a layer whose shape comes from a height map (flat bases, heaped tops)\n// displaced by billowy 3D noise. Output is premultiplied light in RGB, transmittance in A.\nprecision highp float;\nprecision highp sampler2D;\nprecision highp sampler3D;\nin vec2 vUv;\nout vec4 fragColor;\n\nuniform sampler3D uShape, uDetail;\nuniform sampler2D uWeather, uCover, uSky, uBust, uBlue;\nuniform vec4  uSlot[4];\nuniform int   uBustOn, uErodeOn;\nuniform vec3  uCamF, uCamR, uCamU, uSunDir, uLightDir, uSunCol, uAmbUp, uAmbDown, uAmbGround, uGlow;\nuniform vec2  uWind, uFrameOff, uTexel;\nuniform float uTime, uFrame, uCamY, uBase, uThick, uMap, uFog, uDensity, uLightDen, uHazeGain, uN;\n\n#ifndef MAX_STEPS\n#define MAX_STEPS 128\n#endif\n#ifndef LIGHT_STEPS\n#define LIGHT_STEPS 5\n#endif\n\nconst float PI = 3.14159265;\nconst float T_MAX = 62.0;\nconst float SHAPE_PERIOD = 15.0, DETAIL_PERIOD = 2.3;\n\nfloat sat(float x) { return clamp(x, 0.0, 1.0); }\nfloat hg(float c, float g) { float g2 = g * g; return (1.0 - g2) / (4.0 * PI * pow(1.0 + g2 - 2.0 * g * c, 1.5)); }\n\nvec2 skyUv(vec3 d) {\n  vec2 a = normalize(d.xz), s = normalize(uSunDir.xz);\n  float az = acos(clamp(dot(a, s), -1.0, 1.0));\n  float el = asin(clamp(d.y, -1.0, 1.0));\n  float v = sign(el) * sqrt(abs(el) / (PI * 0.5));\n  return vec2(sqrt(az / PI), v * 0.5 + 0.5);\n}\n\n// Signed distance-like field in km: positive inside the cloud.\n// The map stores, for spherical heaps, the potential P = T^2(1 - r^2/R^2) and a smooth local height T,\n// so (P - y^2) / 2T behaves like a true distance on the tops and the flanks alike, and noise can push the\n// surface outward in any direction. fine=false skips the smallest detail, for light rays.\nstruct Sample { float sd; float den; float inner; float heat; float cav; };\n\n// Erosion, heat and drift at a point. Slots are flat atlases of 16 layers, 64 texels square.\nvec4 bustAt(vec2 q, float y) {\n  for (int i = 0; i < 4; i++) {\n    vec4 sl = uSlot[i];\n    if (sl.w < 0.5) continue;\n    vec2 d = q - sl.xy;\n    d -= uMap * floor(d / uMap + 0.5);\n    vec2 uv = d / (2.0 * sl.z) + 0.5;\n    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) continue;\n    vec2 rim = min(uv, 1.0 - uv);          // die away before the volume's own edge, or its square shows\n    float z = clamp((y + 0.2) / (uThick + 0.6), 0.0, 1.0) * 16.0 - 0.5;\n    float k0 = clamp(floor(z), 0.0, 15.0), k1 = min(k0 + 1.0, 15.0), f = clamp(z - k0, 0.0, 1.0);\n    vec2 inner = clamp(uv, vec2(0.5 / 64.0), vec2(63.5 / 64.0)) * 64.0;\n    vec2 base = vec2(float(i & 1), float(i >> 1)) * 256.0;\n    vec2 a = base + vec2(mod(k0, 4.0), floor(k0 / 4.0)) * 64.0 + inner;\n    vec2 b = base + vec2(mod(k1, 4.0), floor(k1 / 4.0)) * 64.0 + inner;\n    return mix(textureLod(uBust, a / 512.0, 0.0), textureLod(uBust, b / 512.0, 0.0), f) * smoothstep(0.0, 0.12, min(rim.x, rim.y));\n  }\n  return vec4(0.0);\n}\n\n\nSample field(vec3 p, bool fine, float lod, float px) {\n  Sample s; s.sd = -1.0; s.den = 0.0; s.inner = 0.0; s.heat = 0.0; s.cav = 0.5;\n  vec2 uv = (p.xz + uWind) / uMap;\n  vec2 w = textureLod(uWeather, uv, 0.0).rg;\n  float y = p.y - uBase;\n  float T = max(w.g, 0.3), yy = max(y, 0.0);\n  float sdTop = (w.r - yy * yy) / (2.0 * T);\n  float sd0 = min(sdTop, y * 2.4 + 0.3);\n  float amp = (0.26 * T + 0.2) * (0.3 + 0.7 * smoothstep(0.0, 0.8, y));\n  if (sd0 < -amp * 1.15) { s.sd = sd0 * min(1.0, T) + amp * 1.15; return s; }\n  float shell = sd0;\n\n  float erode = uErodeOn > 0 ? textureLod(uCover, uv, 0.0).g : 0.0;\n  vec3 q = vec3(p.x + uWind.x, p.y - uTime * 0.012, p.z + uWind.y);\n  float wispy = 0.0;\n  if (uBustOn > 0) {\n    vec4 b = bustAt(vec2(p.x + uWind.x, p.z + uWind.y), y);\n    erode = max(erode, b.r);\n    s.heat = b.g;\n    q.xy -= b.ba;          // the noise is carried along with the moving air\n  }\n  if (erode > 0.01) {\n    // Where a cloud is coming apart, swirl the noise on itself: domain-warped noise makes smoke-like tendrils\n    wispy = smoothstep(0.02, 0.45, erode);\n    q += vec3(erode * 1.4, -erode * 0.5, 0.0);     // what is let go slides away down the wind, and lifts a little\n    vec4 sw = textureLod(uDetail, q / 7.3 + vec3(0.0, uTime * 0.004, 0.0), 1.0);\n    vec3 w1 = (sw.rgb - 0.5) * vec3(1.0, 0.8, 1.0);\n    q += w1 * wispy * 1.5;\n    if (fine) {\n      vec4 sw2 = textureLod(uDetail, q / 3.1 - vec3(uTime * 0.006, 0.0, 0.0), 2.0);\n      q += (sw2.gbr - 0.5) * wispy * 0.6;\n    }\n  }\n  vec4 n = textureLod(uShape, q / SHAPE_PERIOD, 0.0);\n  float bill = n.g * 0.38 + n.b * 0.36 + n.a * 0.26;\n  float nn = (bill - 0.475) * 3.1 + (n.r - 0.5) * 0.9;\n  sd0 = min(sdTop, (y + (n.r - 0.5) * 0.2 + (n.b - 0.5) * 0.12) * 2.4 + 0.04);     // bases are level, but never ruled flat\n  float sd = sd0 + amp * nn * (1.0 + wispy * 0.8);\n  float soft = clamp(px * 5.0, 0.025, 0.06) + 0.3 * wispy, thin = 1.0, close = 0.0;\n  float det = 0.5, ridge = 0.7;\n  bool nearSkin = sd > -0.12 && sd < 0.4;\n  if (fine && (nearSkin || erode > 0.003)) {\n    vec4 dn = textureLod(uDetail, q / DETAIL_PERIOD, lod + wispy * 1.4);\n    det = dn.r * 0.6 + dn.g * 0.28 + dn.b * 0.12;\n    ridge = 1.0 - abs(dn.a * 2.0 - 1.0);\n    if (px < 0.02 && nearSkin) {            // a cloud close overhead shows one more generation of billows\n      vec4 dc = textureLod(uDetail, q / 0.83, 0.0);\n      close = (dc.r * 0.6 + dc.g * 0.4 - 0.5) * (1.0 - smoothstep(0.008, 0.02, px));\n    }\n  }\n  float skin = ((det - 0.5) * 0.7 + close * 0.17) * (0.45 + 0.55 * sat(y / 0.7));\n  if (erode > 0.003) {\n    if (fine) {\n      // Loosened cloud is drawn out by the wind: softer noise, stretched along the breeze, makes strands instead of grains\n      vec4 st = textureLod(uDetail, q * vec3(0.34, 1.1, 0.7) / DETAIL_PERIOD, 1.2);\n      float strands = st.r * 0.6 + st.g * 0.4;\n      det = mix(det, strands, wispy * 0.8);\n      ridge = mix(ridge, 1.0 - abs(st.a * 2.0 - 1.0), wispy);\n    }\n    // Every spot has its own moment to let go, set by the billows and their finer detail: valleys first, crowns last.\n    // Inside the band that is letting go the cloud's depth is forgotten and only the noise decides what stays,\n    // so a growing gap is edged with lace and scraps rather than a smooth wall.\n    float moment = 0.06 + 0.86 * sat((mix(bill, det, fine ? 0.62 : 0.0) - 0.22) / 0.56);\n    float gate = smoothstep(moment - 0.22, moment + 0.3, erode * 1.3);\n    float deep = max(sd, 0.0) / (1.0 + max(sd, 0.0));\n    float rim = smoothstep(-amp * 1.1, amp * 0.3, shell);     // lace thins toward the cloud's old outline, which must not show as a shell\n    float lace = deep * (1.0 - gate) * 0.4 + (det - 0.5) * (0.6 + 0.6 * gate) - gate * 0.42 + (ridge - 0.7) * 0.4 * wispy - (1.0 - rim) * 0.5;\n    sd = mix(sd + skin, lace, smoothstep(0.0, 0.12, gate));\n    thin = 1.0 - 0.8 * gate;       // what is left in a gap is vapour, not flakes of cloud\n  } else sd += skin;\n  s.sd = sd;\n  s.den = smoothstep(0.0, soft, sd) * thin * (1.0 - 0.7 * wispy * (1.0 - smoothstep(0.42, 0.68, det)));\n  s.inner = sat((T - y) / T);\n  s.cav = sat(0.5 + nn * 0.75 + (det - 0.5) * 1.5 + close * 1.3);     // crowns stand out into the sky, valleys sit in their own shade\n  return s;\n}\n\nfloat sunDepth(vec3 p, float j) {\n  float od = 0.0, d = 0.03 + 0.05 * j, prev = 0.0;\n  for (int i = 0; i < LIGHT_STEPS; i++) {\n    float seg = d - prev;\n    Sample s = field(p + uLightDir * d, i < 2, 0.5, 0.03);\n    od += s.den * seg;\n    prev = d;\n    d *= 2.15;\n  }\n  return od * uLightDen;\n}\n\nvoid main() {\n  vec2 px = floor(gl_FragCoord.xy) * uN + uFrameOff + 0.5;     // the history pixel this ray refreshes\n  vec2 ndc = px * uTexel * 2.0 - 1.0;\n  vec3 rd = normalize(uCamF + uCamR * ndc.x + uCamU * ndc.y);\n  vec3 ro = vec3(0.0, uCamY, 0.0);\n  fragColor = vec4(0.0, 0.0, 0.0, 1.0);\n  if (rd.y < 0.0015) return;\n  float t0 = max(0.0, (uBase - 0.1 - ro.y) / rd.y);\n  float t1 = min(T_MAX, (uBase + uThick + 0.9 - ro.y) / rd.y);\n  if (t0 >= t1) return;\n\n  float c = dot(rd, uLightDir);\n  float ph0 = mix(hg(c, 0.78), hg(c, -0.28), 0.32);\n  float ph1 = mix(hg(c, 0.45), hg(c, -0.14), 0.4);\n  float ph2 = hg(c, 0.12);\n  // Blue noise stepped by the golden ratio each visit, so accumulation sees fresh, evenly spread samples\n  float visit = floor(uFrame / (uN * uN));\n  ivec2 bp = ivec2(px);\n  float noiseA = fract(texelFetch(uBlue, bp & 63, 0).r + visit * 0.61803399);\n  float noiseB = fract(texelFetch(uBlue, (bp + ivec2(23, 41)) & 63, 0).r + visit * 0.75487767);\n\n  vec3 L = vec3(0.0);\n  float T = 1.0, tSum = 0.0, wSum = 0.0;\n  float t = t0, stride = 0.0;\n  int quiet = 0;\n  float refine = 1.0;\n  bool striding = true;\n  t += noiseA * clamp(t * 0.016, 0.06, 0.5);\n  for (int i = 0; i < MAX_STEPS && t < t1 && T > 0.015; i++) {\n    float ds = clamp(t * 0.016, 0.06, 0.5) * refine;\n    if (i * 3 > MAX_STEPS * 2) ds = max(ds, (t1 - t) / float(MAX_STEPS - i));   // late in the budget, make sure of reaching the far end\n    vec3 p = ro + rd * t;\n    vec2 uv = (p.xz + uWind) / uMap;\n    float cover = textureLod(uCover, uv, 0.0).r;\n    if (cover < 0.01) { t += max(ds * 3.0, 0.5); continue; }\n    Sample s = field(p, true, clamp(log2(t * 0.0017 / 0.036), 0.0, 3.0), t * 0.0017);\n    if (s.sd < -0.2) { stride = clamp(-s.sd * 0.55, ds, 0.7); t += stride; refine = 1.0; striding = true; continue; }     // the field is distance-like: stride through open air\n    if (striding) { striding = false; t += noiseA * ds - stride * 0.8; continue; }     // step back, a long stride may have landed past the skin; fresh jitter, or surfaces show contour lines\n    refine = s.sd > -0.08 ? 0.42 : 1.0;      // tread lightly near a surface\n    if (s.den > 0.002) {\n      float sigma = s.den * uDensity;\n      float tau = sunDepth(p, noiseB);\n      float e0 = exp(-tau), e1 = exp(-tau * 0.42), e2 = exp(-tau * 0.17);\n      float direct = e0 * ph0 + 0.34 * e1 * ph1 + 0.16 * e2 * ph2;\n      direct *= mix(0.72, 1.0, 1.0 - exp(-tau * 2.5 - 0.15));     // a soft powder darkening in crevices\n      float inner = s.inner;\n      vec3 amb = mix(uAmbDown, uAmbUp, 1.0 - inner * 0.8) * (0.55 + 0.45 * sat(1.0 - s.sd / 0.7));\n      amb *= mix(0.5, 1.3, s.cav);\n      float low = sat(1.0 - (p.y - uBase) / 0.6);\n      amb += uAmbGround * low * 0.35;\n      vec3 S = uSunCol * direct + amb + uGlow * s.heat * s.heat * 0.035;\n      float tr = exp(-sigma * ds);\n      float a = 1.0 - tr;\n      L += T * S * a;\n      tSum += t * T * a; wSum += T * a;\n      T *= tr;\n    }\n    t += ds;\n  }\n  if (wSum > 0.0) {\n    float tAvg = tSum / wSum;\n    float fog = 1.0 - exp(-tAvg * uFog);\n    vec3 dh = normalize(vec3(rd.x, max(rd.y, 0.015) * 0.5, rd.z));\n    vec3 haze = texture(uSky, skyUv(dh)).rgb * uHazeGain;\n    L = mix(L, haze * (1.0 - T), fog);\n  }\n  fragColor = vec4(L, T);\n}\n","noise3d":"#version 300 es\n// Bakes one slice of tiling 3D noise. uKind 0: billow shape volume. uKind 1: fine detail volume.\nprecision highp float;\nprecision highp int;\nin vec2 vUv;\nout vec4 fragColor;\nuniform float uZ;     // slice position 0..1\nuniform int uKind;\n\nvec3 hash(vec3 p) {\n  uvec3 q = uvec3(ivec3(p)) * uvec3(1597334673U, 3812015801U, 2798796415U);\n  q = (q.x ^ q.y ^ q.z) * uvec3(1597334673U, 3812015801U, 2798796415U);\n  return vec3(q) / 4294967295.0;\n}\n// Tiling Worley noise, inverted: 1 at feature points, so each cell is a round puff.\nfloat worley(vec3 p, float freq) {\n  vec3 q = p * freq, id = floor(q), f = fract(q);\n  float best = 1e9;\n  for (int z = -1; z <= 1; z++) for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {\n    vec3 c = vec3(x, y, z);\n    vec3 r = c + hash(mod(id + c, freq)) - f;\n    best = min(best, dot(r, r));\n  }\n  return 1.0 - clamp(best, 0.0, 1.0);    // squared distance: rounded domes meeting in sharp creases, like cauliflower\n}\nfloat perlin(vec3 p, float freq) {\n  vec3 q = p * freq, id = floor(q), f = fract(q);\n  vec3 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);\n  float n[8];\n  for (int i = 0; i < 8; i++) {\n    vec3 c = vec3(float(i & 1), float((i >> 1) & 1), float((i >> 2) & 1));\n    vec3 g = normalize(hash(mod(id + c, freq)) * 2.0 - 1.0 + 1e-4);\n    n[i] = dot(g, f - c);\n  }\n  float x0 = mix(n[0], n[1], u.x), x1 = mix(n[2], n[3], u.x);\n  float x2 = mix(n[4], n[5], u.x), x3 = mix(n[6], n[7], u.x);\n  return mix(mix(x0, x1, u.y), mix(x2, x3, u.y), u.z) * 1.15 + 0.5;\n}\nfloat worleyFbm(vec3 p, float f) {\n  float v = worley(p, f) * 0.6 + worley(p, f * 2.0) * 0.27 + worley(p, f * 4.0) * 0.13;\n  return clamp((v - 0.74) / 0.38 + 0.5, 0.0, 1.0);\n}\n\nvoid main() {\n  vec3 p = vec3(vUv, uZ);\n  // A slight tiling warp so cells do not read as spheres\n  p += (vec3(perlin(p + 0.31, 5.0), perlin(p + 0.57, 5.0), perlin(p + 0.83, 5.0)) - 0.5) * 0.045;\n  if (uKind == 0) {\n    float pf = perlin(p, 4.0) * 0.6 + perlin(p, 8.0) * 0.28 + perlin(p, 16.0) * 0.12;\n    float wf = worleyFbm(p, 4.0);\n    float pw = clamp(wf + (pf - 0.5) * 0.8, 0.0, 1.0);     // Perlin-Worley: cells with a soft fractal skin\n    fragColor = vec4(pw, worleyFbm(p, 3.0), worleyFbm(p, 7.0), worleyFbm(p, 13.0));\n  } else {\n    fragColor = vec4(worleyFbm(p, 4.0), worleyFbm(p, 7.0), worleyFbm(p, 12.0), perlin(p, 6.0) * 0.6 + perlin(p, 12.0) * 0.4);\n  }\n}\n","rays":"#version 300 es\n// Sun shafts: from each point, look back along the screen toward the sun and see how clear the way is.\n// Works with the sun off screen too, and at very low resolution.\nprecision highp float;\nprecision highp sampler2D;\nin vec2 vUv;\nout vec4 fragColor;\nuniform sampler2D uClouds, uBlue, uHist;\nuniform vec2 uSunUv;\nuniform float uFrame;\nconst int N = 12;\nvoid main() {\n  float j = fract(texelFetch(uBlue, ivec2(gl_FragCoord.xy) & 63, 0).r + uFrame * 0.61803399);\n  vec2 dv = (uSunUv - vUv) * (0.9 / float(N));\n  vec2 p = vUv + dv * j;\n  float sum = 0.0, w = 1.0, total = 0.0;\n  for (int i = 0; i < N; i++) {\n    vec2 q = clamp(p, vec2(0.002), vec2(0.998));\n    sum += textureLod(uClouds, q, 0.0).a * w;\n    total += w;\n    w *= 0.93;\n    p += dv;\n  }\n  float v = sum / total;\n  float prev = texture(uHist, vUv).r;\n  fragColor = vec4(mix(prev, v, 0.12));\n}\n","resolve":"#version 300 es\n// Temporal accumulation. The camera never moves and clouds drift slowly, so only some pixels are marched each frame\n// and everything else is carried forward. uCell picks which pixels of each NxN block are fresh this frame.\nprecision highp float;\nprecision highp sampler2D;\nin vec2 vUv;\nout vec4 fragColor;\nuniform sampler2D uHist, uNew;\nuniform ivec2 uCell;\nuniform int uN;\nuniform float uBlend;\nvoid main() {\n  ivec2 px = ivec2(gl_FragCoord.xy);\n  vec4 h = texelFetch(uHist, px, 0);\n  if (px.x % uN == uCell.x && px.y % uN == uCell.y) {\n    vec4 n = texelFetch(uNew, px / uN, 0);\n    fragColor = mix(h, n, uBlend);\n  } else {\n    fragColor = h;\n  }\n}\n","skylut":"#version 300 es\n// Sky radiance as a function of (angle from the sun's azimuth, elevation). Single scattering plus a\n// gentle multiple-scatter term. Recomputed only when the sun moves.\nprecision highp float;\nprecision highp sampler2D;\nin vec2 vUv;\nout vec4 fragColor;\nuniform float uSunEl;      // radians\nuniform vec3  uRayleigh;   // km^-1, x1000 removed below\nuniform float uMie, uMieG, uOzone, uMsBoost, uGlowK, uNight;\nuniform vec3  uGlow;      // painter's touch: a low band of colour around the whole horizon\n\nconst float PI = 3.14159265, Rg = 6360.0, Rt = 6460.0;\nconst vec3 OZONE = vec3(0.650, 1.881, 0.085) * 1e-3;\n\nvec2 sphere(vec3 o, vec3 d, float r) {\n  float b = dot(o, d), c = dot(o, o) - r * r, h = b * b - c;\n  if (h < 0.0) return vec2(-1.0);\n  h = sqrt(h);\n  return vec2(-b - h, -b + h);\n}\nvec3 extinctionAt(float h, float k) {\n  float r = exp(-h / 8.0), m = exp(-h / 1.2);\n  float o = max(0.0, 1.0 - abs(h - 25.0) / 15.0);\n  return uRayleigh * r * 1e-3 + vec3(uMie * 1e-3 * 1.11) * m + OZONE * o * uOzone * k;\n}\nvec3 opticalToSun(vec3 p, vec3 s) {\n  vec2 t = sphere(p, s, Rt);\n  if (t.y <= 0.0) return vec3(0.0);\n  vec2 g = sphere(p, s, Rg + 0.01);\n  if (g.x > 0.0) return vec3(1e3);\n  float dt = t.y / 6.0;\n  vec3 sum = vec3(0.0);\n  for (int i = 0; i < 6; i++) {\n    float h = length(p + s * dt * (float(i) + 0.5)) - Rg;\n    sum += extinctionAt(h, 1.0);\n  }\n  return sum * dt;\n}\nvoid main() {\n  float az = vUv.x * vUv.x * PI;\n  float v = vUv.y * 2.0 - 1.0;\n  float el = sign(v) * v * v * PI * 0.5;\n  vec3 d = vec3(sin(az) * cos(el), sin(el), -cos(az) * cos(el));\n  vec3 s = vec3(0.0, sin(uSunEl), -cos(uSunEl));\n  vec3 o = vec3(0.0, Rg + 0.05, 0.0);\n  vec2 tA = sphere(o, d, Rt), tG = sphere(o, d, Rg);\n  float tMax = tG.x > 0.0 ? tG.x : tA.y;\n  float dt = tMax / 18.0;\n  vec3 odView = vec3(0.0), ray = vec3(0.0), mie = vec3(0.0);\n  for (int i = 0; i < 18; i++) {\n    vec3 p = o + d * dt * (float(i) + 0.5);\n    float h = length(p) - Rg;\n    vec3 ext = extinctionAt(h, 1.0);\n    odView += ext * dt * 0.5;\n    vec3 tr = exp(-(odView + opticalToSun(p, s)));\n    ray += tr * exp(-h / 8.0) * dt;\n    mie += tr * exp(-h / 1.2) * dt;\n    odView += ext * dt * 0.5;\n  }\n  float c = dot(d, s);\n  float pr = 3.0 / (16.0 * PI) * (1.0 + c * c);\n  float g = uMieG, g2 = g * g;\n  float pm = 3.0 / (8.0 * PI) * (1.0 - g2) * (1.0 + c * c) / ((2.0 + g2) * pow(1.0 + g2 - 2.0 * g * c, 1.5));\n  vec3 L = ray * uRayleigh * 1e-3 * pr + mie * uMie * 1e-3 * pm;\n  // Second-order light: a soft lift so twilight colours stay luminous instead of falling to black.\n  float sunUp = smoothstep(-0.22, 0.25, sin(uSunEl));\n  vec3 ms = (uRayleigh / 33.0) * mix(0.0009, 0.0075, sunUp) * uMsBoost;\n  L += ms * (0.6 + 0.4 * exp(-max(d.y, 0.0) * 2.0));\n  L *= 20.0;                           // 20: the sun's irradiance\n  float low = exp(-max(d.y, 0.0) * uGlowK);\n  L += uGlow * low * (0.55 + 0.45 * (0.5 + 0.5 * cos(az)));\n  L += uNight * mix(vec3(0.03, 0.042, 0.088), vec3(0.008, 0.014, 0.042), smoothstep(0.0, 0.55, d.y));    // a moonlit sky, not a black one\n  fragColor = vec4(L, 1.0);\n}\n"};
 
 
 // ==== gl.js ====
@@ -304,7 +306,7 @@ CB.Sky = (function () {
 CB.Clouds = (function () {
   const N = 1024, NC = 256;    // cloud shape map, and a coarse map of presence and erosion
   const MAP = 120;             // km covered by the map, it wraps
-  const BASE = 1.15, THICK = 4.8;
+  const BASE = 1.65, THICK = 6.1; // crowns reach about 7 km; the extra height contains their noisy edges
 
   function rng(seed) {
     let s = seed >>> 0;
@@ -316,9 +318,13 @@ CB.Clouds = (function () {
       this.gl = gl; this.hdr = hdr;
       this.map = MAP; this.base = BASE; this.thick = THICK;
       this.opts = Object.assign({ steps: 128, lightSteps: 5, shapeSize: 128, blend: 0.1 }, opts);
-      this.rand = rng(this.opts.seed || 7);
+      this.seed = this.opts.seed ?? 7;
+      this.rand = rng(this.seed);
+      this.cloudscape = null;
+      this.revision = 0;
       this.wind = [0, 0];
       this.windVel = [0.03, 0];
+      this.windScale = 1;
       this.list = [];
       this.potential = new Float32Array(N * N);
       this.tSum = new Float32Array(N * N);
@@ -347,8 +353,7 @@ CB.Clouds = (function () {
       gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      this.populate();
-      this.uploadAll();
+      this.setCloudscape(this.opts.cloudscape || 'towering');
     }
 
     wrapLinear() {
@@ -411,11 +416,15 @@ CB.Clouds = (function () {
     makeCloud(x, z, R, top) {
       const r = this.rand, blobs = [];
       const core = Math.min(R * 0.6, top * 1.05);
-      blobs.push({ x, z, R: core, T: Math.min(top, core * 1.2) });
+      const tall = this.cloudscape === 'towering' && R >= 2.5;
+      // Small companions stay rounded; only substantial cloud bodies grow tall crowns.
+      // Tall crowns have their own vertical extent, rather than being capped by their footprint.
+      // Their smaller shoulders leave blue sky between individual towers.
+      blobs.push({ x, z, R: core, T: tall ? top : Math.min(top, core * 1.2) });
       const towers = 1 + Math.floor(r() * 3);
       for (let i = 0; i < towers; i++) {
         const a = r() * 6.283, d = R * (0.15 + 0.4 * r()), size = core * (0.55 + 0.3 * r());
-        blobs.push({ x: x + Math.cos(a) * d, z: z + Math.sin(a) * d, R: size, T: Math.min(top * (0.7 + 0.3 * r()), size * 1.25) });
+        blobs.push({ x: x + Math.cos(a) * d, z: z + Math.sin(a) * d, R: size, T: tall ? top * (0.52 + 0.34 * r()) : Math.min(top * (0.7 + 0.3 * r()), size * 1.25) });
       }
       const n = Math.round(6 + R * 3.2);
       for (let i = 0; i < n; i++) {
@@ -428,11 +437,42 @@ CB.Clouds = (function () {
       return c;
     }
 
+    // A new composition starts a fresh sky. Bust observes revision before using any old holes;
+    // callers do not need to manage simulation textures or retain old cloud references.
+    setCloudscape(mode) {
+      if (mode !== 'gentle' && mode !== 'towering') throw new RangeError('Unknown cloudscape: ' + mode);
+      if (mode === this.cloudscape) return false;
+      this.cloudscape = mode;
+      this.rand = rng(this.seed);
+      this.wind[0] = this.wind[1] = 0;
+      this.list = [];
+      this.pending = 0; this.patches = []; this.tendT = 0;
+      this.populate();
+      this.uploadAll();
+      this.revision++;
+      this.warm = this.cellN * this.cellN;
+      return true;
+    }
+
+    cloudTop(R) {
+      const r = this.rand;
+      return this.cloudscape === 'towering'
+        ? Math.min(5.5, R * (0.85 + 0.55 * r()) + 0.55)
+        : Math.min(3.8, R * (0.5 + 0.35 * r()) + 0.3);
+    }
+
     populate() {
       const r = this.rand;
+      const tall = this.cloudscape === 'towering';
       // Heroes placed for composition; a thin random field further out. The strip the viewer's sky travels along
       // stays clear so nothing parks a grey ceiling straight overhead.
-      const heroes = [
+      const heroes = tall ? [
+        [-5.8, -11.5, 3.3, 5.5], [6.5, -10.5, 3.0, 4.9], [-1, -18, 4.5, 4.6],
+        [15, -21, 5.0, 5.4], [-16, -21, 5.2, 5.1],
+        [1.1, -5.2, 0.75, 1.6], [-10.5, -5, 1.35, 1.9], [12, -5.8, 1.4, 1.6],
+        [32, -14, 4.8, 4.3], [-34, -26, 6.2, 5.3], [12, -37, 6.2, 4.7],
+        [50, -36, 7, 5.1], [-55, -42, 7, 4.9], [30, -47, 6.2, 4.4], [-22, -44, 6, 4.8],
+      ] : [
         [-5.5, -8.5, 4.0, 3.6], [6.5, -6.2, 3.2, 3.4], [-1, -17, 5.6, 4.4], [15, -19, 6, 4.4], [-16, -19, 6, 4.2],
         [1, -3.6, 0.9, 0.7], [-11, -4.2, 1.6, 1.2], [13, -4.6, 1.5, 1.3], [32, -12, 5.5, 3.6], [-34, -24, 7.5, 4.4], [12, -36, 7.5, 4],
         [50, -34, 8.5, 4.2], [-55, -40, 8.5, 4.2], [30, -46, 7.5, 3.8], [-22, -42, 7, 4],
@@ -446,20 +486,20 @@ CB.Clouds = (function () {
       // Three processions of nearer clouds along the wind, so something always sails past overhead
       for (const [gap, size, depth] of [[9, [1.2, 1.3], [0.2, 1.6]], [4.5, [1.5, 1.7], [2.0, 3.2]], [6, [2.2, 2.6], [7, 8]]]) {
         for (let x = 2 + r() * 5; x < MAP; x += gap + r() * gap) {
-          const R = size[0] + r() * size[1], z = -(R + depth[0] + r() * depth[1]);
+          const R = size[0] + r() * size[1], z = -(R + (tall ? Math.max(5, depth[0]) : depth[0]) + r() * depth[1]);
           const wx = ((x + MAP / 2) % MAP) - MAP / 2;
-          if (!clashes(wx, z, R)) this.makeCloud(wx, z, R, Math.min(THICK * 0.86, R * (0.8 + 0.3 * r()) + 0.3));
+          if (!clashes(wx, z, R)) this.makeCloud(wx, z, R, this.cloudTop(R));
         }
       }
       // The rest of the field fills the half of the map the viewer faces, all the way along the wind
       let tries = 0;
-      while (this.list.length < 96 && tries++ < 4000) {
+      while (this.list.length < (tall ? 80 : 96) && tries++ < 4000) {
         const x = (r() - 0.5) * MAP, z = -r() * MAP * 0.52;
         const big = r();
         const R = big < 0.3 ? 4.5 + r() * 4 : 1.2 + r() * 2.8;
-        if (Math.abs(z) < R + 1.7) continue;
+        if (Math.abs(z) < R + (tall ? 4.5 : 1.7)) continue;
         if (clashes(x, z, R * 1.08)) continue;
-        this.makeCloud(x, z, R, Math.min(THICK, R * (0.5 + 0.35 * r()) + 0.3));
+        this.makeCloud(x, z, R, this.cloudTop(R));
       }
     }
 
@@ -568,7 +608,7 @@ CB.Clouds = (function () {
       if (dir[1] < 0.01) return null;
       const P = this.potential, cell = MAP / N;
       let t = Math.max(0, (BASE - 0.15 - 0.05) / dir[1]);
-      const end = Math.min(60, (BASE + THICK - 0.05) / dir[1]);
+      const end = Math.min(62, (BASE + THICK - 0.05) / dir[1]);
       while (t < end) {
         const ds = Math.min(0.3, Math.max(0.06, t * 0.012));
         const x = dir[0] * t + this.wind[0], y = dir[1] * t + 0.05 - BASE, z = dir[2] * t + this.wind[1];
@@ -686,7 +726,7 @@ CB.Clouds = (function () {
           x = side + this.wind[0]; z = -dist + this.wind[1];
           if (!this.list.some(o => !o.dead && this.gap(o, x, z) < o.R + R + 1)) break;
         }
-        const c = this.makeCloud(x, z, R, Math.min(THICK, R * (0.6 + 0.3 * r()) + 0.4));
+        const c = this.makeCloud(x, z, R, this.cloudTop(R));
         c.born = 0.001; c.life = 0.001;
         c.near = this.neighbours(c);
         this.setEroded(c, 1);
@@ -739,8 +779,10 @@ CB.Clouds = (function () {
     }
 
     update(dt) {
-      this.wind[0] += this.windVel[0] * dt;
-      this.wind[1] += this.windVel[1] * dt;
+      // Pace changes the breeze only: holes, healing and a held beam still use real elapsed time.
+      const drift = dt * (Number.isFinite(this.windScale) ? Math.max(0, this.windScale) : 1);
+      this.wind[0] += this.windVel[0] * drift;
+      this.wind[1] += this.windVel[1] * drift;
       this.tend(dt);
       this.spawnPending();
     }
@@ -792,6 +834,7 @@ CB.Bust = (function () {
   return class Bust {
     constructor(gl, hdr, clouds) {
       this.gl = gl; this.clouds = clouds;
+      this.cloudRevision = clouds.revision;
       this.a = CB.GLU.target(gl, 512, 512, hdr);
       this.b = CB.GLU.target(gl, 512, 512, hdr);
       for (const t of [this.a, this.b]) { gl.bindFramebuffer(gl.FRAMEBUFFER, t.fb); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); }
@@ -808,6 +851,22 @@ CB.Bust = (function () {
       this.onBloom = null;
       this.blooms = new Set();   // clouds unravelling that have not yet opened their flood of light
       this.time = 0;
+    }
+
+    // Cloudscape changes replace the weather map. Old atlas holes must never mark the new sky,
+    // and an old held ray must never unravel a cloud that is no longer in the composition.
+    syncCloudscape() {
+      if (this.cloudRevision === this.clouds.revision) return;
+      this.cloudRevision = this.clouds.revision;
+      for (let i = 0; i < this.slots.length; i++) {
+        const s = this.slots[i];
+        s.cloud = null; s.heat = 0; s.used = 0; s.leaving = 0;
+        this.clearSlot(i);
+      }
+      this.blooms.clear();
+      this.beam.hit = null; this.beam.hold = 0; this.beam.on = 0;
+      this.settling = null; this.settledAt = 0;
+      this.unravel = 0; this.flash = 0; this.flashGoal = 0; this.acc = 0;
     }
 
     slotFor(c) {
@@ -842,6 +901,7 @@ CB.Bust = (function () {
 
     // power 0..1, dir = unit world ray
     setBeam(power, dir) {
+      this.syncCloudscape();
       const b = this.beam;
       b.on = power; b.dir = dir;
       const hit = power > 0.02 ? this.clouds.hit(dir) : null;
@@ -856,6 +916,7 @@ CB.Bust = (function () {
     }
 
     update(dt) {
+      this.syncCloudscape();
       this.time += dt;
       const c = this.clouds, b = this.beam;
       // Damage: a sustained beam on one cloud eventually sets the whole of it unravelling
@@ -917,6 +978,7 @@ CB.Bust = (function () {
     }
 
     marchUniforms() {
+      this.syncCloudscape();
       return { uBust: this.a.tex, uSlot: this.packSlots(), uBustOn: this.slots.some(s => s.cloud) ? 1 : 0 };
     }
   };
@@ -3139,7 +3201,8 @@ CB.Audio = class {
   }
 
   event(name, opts) {
-    if (name === 'bloom' && this.ctx && this.loops) this._bloom(clamp(opts && opts.size !== undefined ? opts.size : 0.7));
+    if (name === 'bloom' && this.ctx && this.loops && (this.offline || (this.wantRun && this.ctx.state === 'running')))
+      this._bloom(clamp(opts && opts.size !== undefined ? opts.size : 0.7));
   }
 
   setMuted(on) { this.muted = !!on; this._applyVolumes(); }
@@ -3879,109 +3942,212 @@ CB.Audio.TUNE = TUNE;
 
 
 // ==== ui.js ====
-// The little that is on screen besides the sky: one gentle line of instruction, and quiet controls.
+// A small field notebook: the sky always has the larger page.
 CB.UI = class {
   constructor(hooks) {
     this.hooks = hooks;
+    const initial = Object.assign({ sky: null, drift: true, pace: 0.55, cloudscape: 'towering', muted: false, music: 0.7, sound: 0.65 }, hooks.initial || {});
     const el = document.createElement('div');
     el.id = 'ui';
     el.innerHTML = `
-      <div id="hint">Point toward a cloud. Hold to let it drift away.</div>
-      <div id="bar">
-        <button id="b-sound" class="pill" aria-pressed="true">Sound <span>on</span></button>
-        <button id="b-more" class="box" aria-expanded="false" aria-label="More settings">+</button>
-      </div>
-      <div id="panel" hidden>
-        <div class="row"><span class="lab">Music</span><button class="box" data-v="music,-1" aria-label="Music softer">&minus;</button><span class="val" id="v-music"></span><button class="box" data-v="music,1" aria-label="Music louder">+</button></div>
-        <div class="row"><span class="lab">Sounds</span><button class="box" data-v="sound,-1" aria-label="Sounds softer">&minus;</button><span class="val" id="v-sound"></span><button class="box" data-v="sound,1" aria-label="Sounds louder">+</button></div>
-        <div class="row skies" id="skies"></div>
-        <div class="row"><button class="pill wide" id="b-drift" aria-pressed="true">Day passes <span>on</span></button></div>
-        <div class="row"><span class="lab">Detail</span><button class="box" data-d="-1" aria-label="Less detail">&minus;</button><span class="val" id="v-detail">Auto</span><button class="box" data-d="1" aria-label="More detail">+</button></div>
-        <div class="row" id="r-full"><button class="pill wide" id="b-full">Full screen</button></div>
-      </div>`;
+      <div id="hint">Find a cloud. Hold a little while. Let it go.</div>
+      <aside id="panel" aria-label="Sky notebook">
+        <header class="notebook-heading">
+          <div><span class="eyebrow">CLOUD BUSTER · FIELD NOTES</span><h1>A little time with the sky</h1></div>
+          <svg class="sprig" viewBox="0 0 42 48" fill="none" aria-hidden="true"><path d="M12 45C19 33 26 19 29 3M19 32C6 33 6 22 6 22S19 21 19 32ZM24 22C35 24 38 14 38 14S26 11 24 22ZM27 13C17 14 17 5 17 5S26 4 27 13"/></svg>
+        </header>
+        <div class="spread">
+          <section class="page page-left" aria-label="Sky moods">
+            <h2>A light to linger in</h2>
+            <div id="skies" class="skies" role="group" aria-label="Choose a sky mood"></div>
+            <button id="b-drift" class="line-button" aria-pressed="true"><i class="toggle-mark" aria-hidden="true"></i>Day passes <span>on</span></button>
+          </section>
+          <section class="page page-right" aria-label="Movement and clouds">
+            <h2>At your own pace</h2>
+            <div class="segments pace" role="group" aria-label="Sky movement"><button data-pace="0">Still</button><button data-pace="0.55">Slow</button><button data-pace="1.3">Breezy</button></div>
+            <h2 class="second-label">Clouds overhead</h2>
+            <div class="segments cloudscapes" role="group" aria-label="Cloudscape"><button data-cloudscape="gentle">Gentle</button><button data-cloudscape="towering">Towering</button></div>
+            <svg class="cloud-study" viewBox="0 0 150 40" fill="none" aria-hidden="true"><path d="M13 27h117M25 24c-10-1-7-12 1-12 0-11 20-13 23-3 11-4 18 4 15 11M77 24c-6-3-5-10 2-11-2-9 11-14 16-7 8-9 21-3 20 7 13-2 18 7 11 11M30 33h32m25 0h20"/><path d="m20 8 2-2m44 1 3 1m57-4 2 2"/></svg>
+            <p class="margin-note">Nothing to finish.<br>Just a little room to breathe.</p>
+          </section>
+        </div>
+        <footer class="notebook-footer">
+          <button id="b-sound" aria-pressed="true"><span class="sound-symbol" aria-hidden="true">♪</span> Sound <span class="sound-state">on</span></button>
+          <button id="b-settings" aria-expanded="false" aria-controls="notebook-settings">Settings <span aria-hidden="true">⌄</span></button>
+          <button id="b-help" aria-expanded="false" aria-controls="notebook-help">Help</button>
+        </footer>
+        <section id="notebook-settings" class="notebook-extra" aria-label="Sound and display settings" hidden>
+          <div class="level-row"><label for="v-music">Music</label><input id="v-music" type="range" min="0" max="10" step="0.5"><output id="music-value" for="v-music"></output></div>
+          <div class="level-row"><label for="v-sound">Nature</label><input id="v-sound" type="range" min="0" max="10" step="0.5"><output id="sound-value" for="v-sound"></output></div>
+          <div class="detail-row"><span>Detail</span><button data-d="-1" aria-label="Less sky detail">−</button><span id="v-detail" aria-live="polite">Auto</span><button data-d="1" aria-label="More sky detail">+</button><button id="b-auto">Auto</button></div>
+          <div class="extra-actions"><button id="b-rest" aria-pressed="false">Rest the sky</button><button id="b-full">Full screen</button></div>
+        </section>
+        <section id="notebook-help" class="notebook-extra help-copy" aria-label="How to spend time here" hidden>
+          <h2>A moment, with no destination</h2>
+          <p>Point to a cloud and hold. A small opening appears; when you let go, the sky slowly gathers again.</p>
+          <p>On a keyboard, focus the sky with Tab, aim with the arrow keys, and hold Space or Enter. Escape releases the sky and folds this notebook.</p>
+          <p>Choose a light to keep it, or let the day pass. Sound begins after your first interaction.</p>
+        </section>
+      </aside>
+      <div id="bar"><button id="b-more" aria-expanded="true" aria-controls="panel"><svg viewBox="0 0 24 20" fill="none" aria-hidden="true"><path d="M12 4C9 2 4 2 2 3v14c3-1 7-1 10 1 3-2 7-2 10-1V3c-3-1-7-1-10 1Zm0 0v14"/></svg><span>Fold notebook</span></button></div>`;
     document.body.appendChild(el);
     const css = document.createElement('style');
     css.textContent = `
-      #ui { position: absolute; inset: 0; pointer-events: none; }
-      #hint { position: absolute; left: 0; right: 0; bottom: max(26px, env(safe-area-inset-bottom)); text-align: center; padding: 0 22px;
-        font-size: clamp(19px, 2.9vmin, 26px); font-style: italic; letter-spacing: .01em; color: #fff; opacity: 0;
-        text-shadow: 0 1px 3px rgba(20,24,44,.85), 0 0 18px rgba(20,24,44,.6); transition: opacity 1.8s ease; }
-      #hint.on { opacity: .96; }
-      #bar { position: absolute; top: max(14px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); display: flex; gap: 10px; pointer-events: auto; transition: opacity 1.4s ease; }
-      #ui.quiet #bar { opacity: .38; }
-      button { font: inherit; color: #fff; border: 1.5px solid rgba(255,255,255,.75); background: rgba(24,30,54,.42);
-        -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); cursor: pointer; touch-action: manipulation; }
-      button:focus-visible { outline: 3px solid #ffe3a8; outline-offset: 2px; }
-      .pill { height: 44px; padding: 0 16px; border-radius: 22px; font-size: 18px; }
-      .pill span { font-weight: 700; }
-      .box { width: 44px; height: 44px; border-radius: 10px; font-size: 26px; line-height: 1; padding: 0; }
-      #panel { position: absolute; top: calc(max(14px, env(safe-area-inset-top)) + 56px); right: max(14px, env(safe-area-inset-right)); width: min(340px, calc(100vw - 28px)); box-sizing: border-box;
-        padding: 14px; border-radius: 16px; background: rgba(20,25,46,.72); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); pointer-events: auto; font-size: 19px;
-        max-height: calc(100dvh - max(14px, env(safe-area-inset-top)) - 70px - env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
-      #panel[hidden] { display: none; }
-      .row { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
-      .lab { flex: 1; }
-      .val { min-width: 2.4em; text-align: center; font-variant-numeric: tabular-nums; }
-      .skies { flex-wrap: wrap; }
-      .skies button { flex: 1 1 42%; height: 44px; border-radius: 10px; font-size: 18px; }
-      .skies button[aria-pressed="true"] { background: #fff; color: #1b2340; }
-      .pill.wide { width: 100%; }`;
+      #ui { --ink:#4e5149; --muted-ink:#737366; --rule:#c6c0ac; --paper:#f4f0df; position:absolute; inset:0; pointer-events:none; z-index:3; }
+      #ui button, #ui input { font:inherit; color:inherit; touch-action:manipulation; }
+      #ui button { min-height:44px; min-width:44px; border:0; cursor:pointer; background:transparent; padding:0 7px; border-radius:4px; }
+      #ui button:hover { background:rgba(108,113,83,.09); }
+      #ui button:focus-visible, #ui input:focus-visible { outline:2px solid #6b6840; outline-offset:2px; }
+      #ui [hidden] { display:none !important; }
+      #hint { position:absolute; left:22px; top:30px; max-width:calc(100vw - 44px); font-size:clamp(17px,2.2vmin,22px); font-style:italic; color:#fffbea; opacity:0; text-shadow:0 1px 5px #263143,0 0 18px #26314399; transition:opacity 1.8s ease; }
+      #hint.on { opacity:.94; }
+      #bar { position:absolute; right:max(20px,env(safe-area-inset-right)); bottom:max(16px,env(safe-area-inset-bottom)); pointer-events:auto; transition:opacity 1.4s ease; }
+      #b-more { display:flex; align-items:center; gap:8px; padding:0 14px!important; font-size:13px!important; color:#f8f2df!important; border:1px solid #ece3c666!important; border-radius:5px!important; background:#394a4399!important; box-shadow:0 2px 12px #1a223322; backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+      #b-more svg { width:22px; height:20px; stroke:currentColor; stroke-width:1.2; }
+      #b-more:focus-visible { outline-color:#fff4c4!important; }
+      #ui.quiet #bar { opacity:.62; }
+      #ui.quiet #bar:hover, #ui.quiet #bar:focus-within { opacity:1; }
+      #panel { position:absolute; right:max(20px,env(safe-area-inset-right)); bottom:calc(max(16px,env(safe-area-inset-bottom)) + 53px); width:348px; max-width:calc(100vw - 24px); box-sizing:border-box; color:var(--ink); background:linear-gradient(90deg,#f3efdf 0%,#f7f3e5 47.5%,#dcd6c2 49.7%,#f4efdf 51%,#f8f4e6 100%); border:1px solid #d3cbb7; border-radius:6px 10px 8px 5px; box-shadow:0 3px 0 -1px #d8d1bb,0 6px 0 -2px #b9b49f,0 12px 38px #172d3e38; pointer-events:auto; font-size:13px; max-height:calc(100dvh - 100px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#b9b49f transparent; touch-action:pan-y; }
+      .notebook-heading { padding:13px 15px 2px; display:flex; align-items:center; justify-content:space-between; gap:6px; }
+      #ui .eyebrow { font-family:Arial,sans-serif; font-size:8px; letter-spacing:1.5px; color:#777665; }
+      #ui h1 { margin:4px 0 0; font-size:19px; font-weight:400; letter-spacing:-.45px; }
+      .sprig { width:30px; height:36px; stroke:#81866b; stroke-width:.9; flex-shrink:0; }
+      .spread { display:grid; grid-template-columns:1fr 1fr; }
+      .page { min-width:0; padding:7px 13px 0; }
+      #ui h2 { margin:0 0 2px; font-size:11px; font-style:italic; font-weight:400; color:var(--muted-ink); }
+      .skies { display:grid; grid-template-columns:1fr 1fr; gap:0 3px; }
+      #skies button { display:flex; align-items:center; justify-content:flex-start; gap:5px; padding:0 4px; font-size:13px; text-align:left; }
+      .sky-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; box-shadow:inset 0 0 0 1px #65716b22; }
+      #ui button[aria-pressed="true"] { background:#737e6517; }
+      #skies button[aria-pressed="true"] { box-shadow:inset 0 -1px #7d8261; }
+      #b-drift { width:100%; display:flex; align-items:center; justify-content:center; gap:5px; font-size:12px; border-top:1px solid #aaa88c40!important; border-radius:0!important; }
+      #b-drift span { color:var(--muted-ink); font-size:11px; }
+      .toggle-mark { width:5px; height:5px; border:1px solid #777b62; border-radius:50%; }
+      #b-drift[aria-pressed="true"] .toggle-mark { background:#777b62; }
+      .segments { display:flex; gap:1px; border-bottom:1px solid #aaa88c40; }
+      .segments button { flex:1; padding:0 3px!important; font-size:12px!important; }
+      #ui .second-label { margin-top:8px; }
+      .cloud-study { display:block; width:100%; height:32px; margin:9px auto 0; stroke:#939981; stroke-width:.8; }
+      .margin-note { text-align:center; color:#757563; font-size:10px; line-height:1.45; font-style:italic; margin:2px 0 0; }
+      .notebook-footer { margin:0 12px; display:flex; justify-content:space-between; border-top:1px solid #aaa88c55; }
+      .notebook-footer button { font-size:12px!important; }
+      .sound-symbol { margin-right:3px; font-size:16px; }
+      .sound-state { color:var(--muted-ink); font-size:10px; }
+      .notebook-extra { padding:8px 14px 12px; margin:0 10px; border-top:1px solid #aaa88c55; background:#f5f1e3e8; }
+      .level-row { display:flex; align-items:center; gap:9px; min-height:44px; }
+      .level-row label { width:44px; }
+      .level-row input { height:44px; min-width:0; flex:1; accent-color:#85896c; cursor:pointer; }
+      .level-row output { width:31px; font-size:11px; text-align:right; }
+      .detail-row { display:flex; align-items:center; gap:3px; }
+      .detail-row > span:first-child { flex:1; }
+      #v-detail { min-width:29px; text-align:center; font-size:12px; }
+      .extra-actions { display:flex; justify-content:space-between; gap:8px; }
+      .extra-actions button { flex:1; font-size:12px!important; }
+      .help-copy p { font-size:13px; line-height:1.5; margin:9px 0; user-select:text; }
+      #ui .help-copy h2 { font-size:16px; margin:5px 0; }
+      @media (max-width:600px) { #panel { right:max(12px,env(safe-area-inset-right)); } #bar { right:max(12px,env(safe-area-inset-right)); } #hint { top:max(20px,env(safe-area-inset-top)); left:20px; font-size:17px; max-width:260px; } }
+      @media (max-width:360px) { .page { padding-left:6px; padding-right:6px; } #skies button { font-size:11px; gap:4px; padding:0 2px; } .sky-dot { width:7px; height:7px; } .notebook-heading { padding-left:10px; padding-right:10px; } #ui h1 { font-size:17px; } }
+      @media (max-height:500px) { #panel { bottom:calc(max(8px,env(safe-area-inset-bottom)) + 49px); max-height:calc(100dvh - 76px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); } #bar { bottom:max(8px,env(safe-area-inset-bottom)); } #hint { top:16px; max-width:40vw; } }
+      @media (prefers-reduced-motion:reduce) { #hint,#bar { transition:none; } }
+    `;
     document.head.appendChild(css);
     this.el = el;
-    this.$ = id => el.querySelector(id);
-    this.music = 10; this.sound = 10; this.muted = false; this.lastTouch = performance.now();
-
-    this.$('#b-sound').onclick = () => this.setMuted(!this.muted);
-    this.$('#b-more').onclick = () => {
-      const p = this.$('#panel'), b = this.$('#b-more');
-      p.hidden = !p.hidden; b.textContent = p.hidden ? '+' : '−'; b.setAttribute('aria-expanded', !p.hidden);
-    };
-    el.querySelectorAll('[data-v]').forEach(b => b.onclick = () => {
-      const [k, d] = b.dataset.v.split(',');
-      this[k] = Math.min(10, Math.max(0, this[k] + +d));
-      this.syncLevels();
+    this.$ = selector => el.querySelector(selector);
+    this.music = Math.max(0, Math.min(10, initial.music * 10));
+    this.sound = Math.max(0, Math.min(10, initial.sound * 10));
+    this.muted = !!initial.muted;
+    this.lastTouch = performance.now();
+    el.addEventListener('pointerdown', () => this.touched());
+    el.addEventListener('focusin', () => this.touched());
+    this.$('#b-more').onclick = () => this.fold(this.$('#panel').hidden);
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !this.$('#panel').hidden) this.fold(false);
     });
-    const sk = this.$('#skies');
-    for (const name of CB.Sky.NAMES) {
-      const b = document.createElement('button');
-      b.textContent = name; b.setAttribute('aria-pressed', 'false');
-      b.onclick = () => { hooks.sky(name); this.showSky(name); this.showDrift(false); };   // a chosen sky stays
-      sk.appendChild(b);
+    this.$('#b-sound').onclick = () => this.setMuted(!this.muted);
+    for (const key of ['music', 'sound']) {
+      this.$('#v-' + key).oninput = e => { this[key] = +e.target.value; this.syncLevels(); };
     }
+    const colors = ['#edc7ac', '#d1dedd', '#aecad4', '#d7b680', '#bbadcb', '#65788b'];
+    CB.Sky.NAMES.forEach((name, index) => {
+      const b = document.createElement('button');
+      b.dataset.sky = name;
+      const dot = document.createElement('span');
+      dot.className = 'sky-dot'; dot.style.background = colors[index % colors.length]; dot.setAttribute('aria-hidden', 'true');
+      b.append(dot, document.createTextNode(name));
+      b.onclick = () => { hooks.sky(name); this.showSky(name); this.showDrift(false); };
+      this.$('#skies').appendChild(b);
+    });
     this.$('#b-drift').onclick = () => {
       const on = this.$('#b-drift').getAttribute('aria-pressed') !== 'true';
-      this.showDrift(on);
-      hooks.drift(on);
-      if (on) this.showSky(null);
+      this.showDrift(on); hooks.drift(on); if (on) this.showSky(null);
     };
+    el.querySelectorAll('[data-pace]').forEach(b => b.onclick = () => { this.showPace(+b.dataset.pace); if (hooks.pace) hooks.pace(+b.dataset.pace); });
+    el.querySelectorAll('[data-cloudscape]').forEach(b => b.onclick = () => { this.showCloudscape(b.dataset.cloudscape); if (hooks.cloudscape) hooks.cloudscape(b.dataset.cloudscape); });
     el.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { this.$('#v-detail').textContent = hooks.detail(+b.dataset.d); });
+    this.$('#b-auto').onclick = () => { this.$('#v-detail').textContent = hooks.detail('auto'); };
+    for (const key of ['settings', 'help']) {
+      this.$('#b-' + key).onclick = () => {
+        const section = this.$('#notebook-' + key), open = section.hidden;
+        section.hidden = !open;
+        this.$('#b-' + key).setAttribute('aria-expanded', String(open));
+        if (open) section.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+      };
+    }
+    if (hooks.rest) {
+      this.$('#b-rest').onclick = () => {
+        const b = this.$('#b-rest'), rest = b.getAttribute('aria-pressed') !== 'true';
+        b.setAttribute('aria-pressed', String(rest)); b.textContent = rest ? 'Resume the sky' : 'Rest the sky'; hooks.rest(rest);
+      };
+    } else this.$('#b-rest').remove();
     const root = document.documentElement;
     if (root.requestFullscreen && document.fullscreenEnabled) {
-      this.$('#b-full').onclick = () => { document.fullscreenElement ? document.exitFullscreen() : root.requestFullscreen().catch(() => {}); };
-    } else this.$('#r-full').remove();
+      this.$('#b-full').onclick = () => {
+        const promise = document.fullscreenElement ? document.exitFullscreen() : root.requestFullscreen();
+        if (promise) promise.catch(() => {});
+      };
+      document.addEventListener('fullscreenchange', () => { this.$('#b-full').textContent = document.fullscreenElement ? 'Leave full screen' : 'Full screen'; });
+    } else this.$('#b-full').remove();
+    this.showMuted(); this.showSky(initial.sky); this.showDrift(initial.drift); this.showPace(initial.pace); this.showCloudscape(initial.cloudscape);
     this.syncLevels();
+    this.fold(!window.matchMedia('(max-width: 600px), (max-height: 500px)').matches, false);
     setTimeout(() => { if (!this.hintGone) this.$('#hint').classList.add('on'); }, 4600);
     this.quietTimer = setInterval(() => {
-      const idle = performance.now() - this.lastTouch > 5000 && this.$('#panel').hidden;
+      const idle = performance.now() - this.lastTouch > 5000 && this.$('#panel').hidden && !el.contains(document.activeElement);
       el.classList.toggle('quiet', idle);
     }, 800);
   }
+  fold(open, returnFocus = true) {
+    this.$('#panel').hidden = !open;
+    const b = this.$('#b-more');
+    b.setAttribute('aria-expanded', String(open));
+    b.querySelector('span').textContent = open ? 'Fold notebook' : 'Sky notebook';
+    if (!open && returnFocus) b.focus({ preventScroll: true });
+    if (open && returnFocus) (this.$('#skies button[aria-pressed="true"]') || this.$('#skies button')).focus({ preventScroll: true });
+    this.touched();
+  }
   showDrift(on) {
-    this.$('#b-drift').setAttribute('aria-pressed', on);
+    this.$('#b-drift').setAttribute('aria-pressed', String(on));
     this.$('#b-drift span').textContent = on ? 'on' : 'off';
   }
   showSky(name) {
-    this.el.querySelectorAll('#skies button').forEach(b => b.setAttribute('aria-pressed', b.textContent === name));
+    this.el.querySelectorAll('#skies button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.sky === name)));
   }
-  setMuted(m) {
-    this.muted = m;
-    this.$('#b-sound').setAttribute('aria-pressed', !m);
-    this.$('#b-sound span').textContent = m ? 'off' : 'on';
-    this.hooks.muted(m);
+  showPace(pace) {
+    this.el.querySelectorAll('[data-pace]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.pace === pace)));
   }
+  showCloudscape(name) {
+    this.el.querySelectorAll('[data-cloudscape]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cloudscape === name)));
+  }
+  showMuted() {
+    this.$('#b-sound').setAttribute('aria-pressed', String(!this.muted));
+    this.$('#b-sound .sound-state').textContent = this.muted ? 'off' : 'on';
+  }
+  setMuted(muted) { this.muted = muted; this.showMuted(); this.hooks.muted(muted); }
   syncLevels() {
-    this.$('#v-music').textContent = this.music;
-    this.$('#v-sound').textContent = this.sound;
+    for (const key of ['music', 'sound']) {
+      this.$('#v-' + key).value = this[key];
+      this.$('#' + key + '-value').value = Math.round(this[key] * 10) + '%';
+    }
     this.hooks.levels(this.music / 10, this.sound / 10);
   }
   touched() { this.lastTouch = performance.now(); this.el.classList.remove('quiet'); }
@@ -4013,7 +4179,25 @@ CB.UI = class {
     powerPreference: 'high-performance', preserveDrawingBuffer: TEST });
   if (!gl) { document.body.textContent = 'This sky needs WebGL 2, which this browser does not offer.'; return; }
 
-  const reducedMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motionQuery = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)');
+  let reducedMotion = !!(motionQuery && motionQuery.matches);
+  // Preferences belong to this edition only; a private window or blocked storage is fine.
+  const prefs = { sky: null, drift: true, pace: reducedMotion ? 0 : 0.55,
+    cloudscape: 'towering', muted: false, music: 0.7, sound: 0.65 };
+  if (!TEST) {
+    try {
+      const p = JSON.parse(localStorage.getItem('cloudbuster.v2.preferences'));
+      if (p && typeof p === 'object') {
+        if (CB.Sky.NAMES.includes(p.sky)) prefs.sky = p.sky;
+        for (const k of ['drift', 'muted']) if (typeof p[k] === 'boolean') prefs[k] = p[k];
+        if ([0, 0.55, 1.3].includes(p.pace)) prefs.pace = p.pace;
+        if (['gentle', 'towering'].includes(p.cloudscape)) prefs.cloudscape = p.cloudscape;
+        for (const k of ['music', 'sound']) if (Number.isFinite(p[k])) prefs[k] = Math.max(0, Math.min(1, p[k]));
+      }
+    } catch (_) {}
+  }
+  if (reducedMotion) prefs.pace = 0;
+  const savePrefs = () => { if (!TEST) try { localStorage.setItem('cloudbuster.v2.preferences', JSON.stringify(prefs)); } catch (_) {} };
   const phoneLike = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && Math.min(screen.width, screen.height) < 820);
 
   // ---- Quality. The sky is amortised, so the main dial is how many pixels are refreshed each frame.
@@ -4028,6 +4212,8 @@ CB.UI = class {
   const sky = new CB.Sky(gl, hdr);
   const clouds = new CB.Clouds(gl, hdr, { seed: +(params.get('seed') || 7), steps: phoneLike ? 84 : 128, lightSteps: phoneLike ? 4 : 5 });
   const bust = new CB.Bust(gl, hdr, clouds);
+  if (clouds.setCloudscape) clouds.setCloudscape(prefs.cloudscape);
+  clouds.windScale = prefs.pace;
   const composite = CB.GLU.program(gl, null, CB.GLSL.composite, 'composite');
   const envProg = CB.GLU.program(gl, null, CB.GLSL.env, 'env');
   const raysProg = CB.GLU.program(gl, null, CB.GLSL.rays, 'rays');
@@ -4045,7 +4231,8 @@ precision highp float; precision highp sampler2D; in vec2 vUv; out vec4 o; unifo
 
   const REST = machine ? CB.Machine.restDir() : [0, 0.5, -0.85];    // how the machine likes to stand, tubes toward the open sky
   const state = {
-    time: 0, day: +(params.get('day') || 0.75), dayTo: null, daySpeed: 0, W: 0, H: 0, cam: null, frameNo: 0,
+    time: 0, day: params.has('day') ? +params.get('day') : (prefs.sky && !prefs.drift ? CB.Sky.positionOf(prefs.sky) : 0.75), dayTo: null, daySpeed: 0, W: 0, H: 0, cam: null, frameNo: 0,
+    pace: prefs.pace, paused: false, blooms: [],
     aim: REST.slice(), aimTarget: REST.slice(), firing: 0, load: 0, wind: 0.5, windX: 0.4,
     pointer: { down: false, x: 0.5, y: 0.4, mouse: false }, muzzle: [0.5, 0.8], idle: 0, restT: 0, shade: 0, shadeGoal: 0,
     flock: { wait: params.has('birds') ? 0 : 50, on: false, t: 0, dur: 1, dir: 1, y: 0.7, size: 0.008, x: 0 },
@@ -4142,15 +4329,18 @@ precision highp float; precision highp sampler2D; in vec2 vUv; out vec4 o; unifo
 
   // ---- Input: press and hold anywhere in the sky
   const P = state.pointer;
+  const keys = new Set();
+  function releaseAll() { P.down = false; P.keyboard = false; keys.clear(); state.locked = false; }
   function track(e) {
     const r = canvas.getBoundingClientRect();
     P.x = (e.clientX - r.left) / r.width; P.y = (e.clientY - r.top) / r.height; P.mouse = e.pointerType === 'mouse';
   }
   canvas.addEventListener('pointerdown', e => {
     e.preventDefault();
-    if (P.down) return;                              // a second finger changes nothing
+    if (P.down || state.paused || (e.pointerType === 'mouse' && e.button !== 0)) return;
     try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
     P.id = e.pointerId;
+    keys.clear(); P.keyboard = false;
     track(e); P.down = true; state.idle = 0;
     if (audio) audio.unlock();
     if (ui) { ui.touched(); ui.dismissHint(); }
@@ -4163,7 +4353,35 @@ precision highp float; precision highp sampler2D; in vec2 vUv; out vec4 o; unifo
   canvas.addEventListener('pointerup', release);
   canvas.addEventListener('pointercancel', release);
   canvas.addEventListener('lostpointercapture', release);
-  for (const type of ['blur', 'pagehide']) window.addEventListener(type, () => { P.down = false; });
+  for (const type of ['blur', 'pagehide']) window.addEventListener(type, releaseAll);
+  canvas.tabIndex = 0;
+  canvas.setAttribute('aria-label', 'Cloudbuster sky. Arrow keys aim. Hold Space or Enter to soften a cloud. Escape releases. Tab opens notebook controls.');
+  const reticle = document.createElement('span');
+  reticle.id = 'keyboard-aim'; reticle.setAttribute('aria-hidden', 'true');
+  reticle.style.cssText = 'position:fixed;width:24px;height:24px;border:1px solid #fff;border-radius:50%;box-shadow:0 0 0 1px #26364a88,0 0 12px #ffffff55;transform:translate(-50%,-50%);pointer-events:none;z-index:1;display:none';
+  document.body.appendChild(reticle);
+  const positionReticle = () => { reticle.style.left = `${P.x * 100}%`; reticle.style.top = `${P.y * 100}%`; };
+  canvas.addEventListener('focus', () => { reticle.style.display = 'block'; positionReticle(); });
+  canvas.addEventListener('blur', () => { reticle.style.display = 'none'; releaseAll(); });
+  canvas.addEventListener('keydown', e => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Enter', 'Escape'].includes(e.key)) return;
+    e.preventDefault();
+    if (e.key === 'Escape') { releaseAll(); return; }
+    if (state.paused || (P.down && !P.keyboard)) return;
+    keys.add(e.key); P.mouse = true; state.idle = 0;
+    if (e.key === ' ' || e.key === 'Enter') {
+      P.keyboard = true; P.down = true;
+      if (audio) audio.unlock();
+      if (ui) ui.dismissHint();
+      requestWake();
+    }
+    if (ui) ui.touched();
+  });
+  window.addEventListener('keyup', e => {
+    keys.delete(e.key);
+    if ((e.key === ' ' || e.key === 'Enter') && P.keyboard && !keys.has(' ') && !keys.has('Enter')) { P.down = false; P.keyboard = false; }
+  });
+  window.addEventListener('keydown', e => { if (e.key === 'Escape') releaseAll(); });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
   document.addEventListener('touchmove', e => {
     if (!(e.target instanceof Element) || !e.target.closest('#panel')) e.preventDefault();
@@ -4174,7 +4392,7 @@ precision highp float; precision highp sampler2D; in vec2 vUv; out vec4 o; unifo
   let contextLost = false;
   canvas.addEventListener('webglcontextlost', e => {
     e.preventDefault();
-    contextLost = true; P.down = false;
+    contextLost = true; releaseAll();
     if (audio) audio.suspend();
     const wakeUp = document.createElement('button');
     wakeUp.textContent = 'Wake the sky';
@@ -4184,24 +4402,40 @@ precision highp float; precision highp sampler2D; in vec2 vUv; out vec4 o; unifo
   });
   canvas.addEventListener('webglcontextrestored', () => location.reload());
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) P.down = false;
-    if (contextLost && audio) audio.suspend();
+    if (document.hidden) releaseAll();
+    if ((contextLost || state.paused) && audio) audio.suspend();
   });
 
   // Keep a phone awake while someone is watching the sky
-  let wake = null;
+  let wake = null, wakePending = false;
   async function requestWake() {
-    try { if ('wakeLock' in navigator && !wake) { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); } } catch (_) {}
+    if (!('wakeLock' in navigator) || wake || wakePending || document.hidden || state.paused) return;
+    wakePending = true;
+    try {
+      const lock = await navigator.wakeLock.request('screen');
+      if (document.hidden || state.paused) { await lock.release(); return; }
+      wake = lock; lock.addEventListener('release', () => { if (wake === lock) wake = null; });
+    } catch (_) {} finally { wakePending = false; }
   }
 
   // ---- The little interface
-  const ui = TEST ? null : new CB.UI({
-    muted: m => audio && audio.setMuted(m),
-    levels: (m, s) => { if (audio) { audio.setMusicVolume(m); audio.setSoundVolume(s); } },
-    sky: name => { state.dayTo = CB.Sky.positionOf(name); state.daySpeed = 0; },
-    drift: on => { state.daySpeed = on ? DAY_SPEED : 0; state.dayTo = null; },
+  const ui = TEST && !params.has('ui') ? null : new CB.UI({
+    initial: prefs,
+    muted: m => { prefs.muted = m; savePrefs(); if (audio) audio.setMuted(m); },
+    levels: (m, s) => { prefs.music = m; prefs.sound = s; savePrefs(); if (audio) { audio.setMusicVolume(m); audio.setSoundVolume(s); } },
+    sky: name => { state.dayTo = CB.Sky.positionOf(name); state.daySpeed = 0; prefs.sky = name; prefs.drift = false; savePrefs(); },
+    drift: on => { state.daySpeed = on ? DAY_SPEED : 0; state.dayTo = null; prefs.drift = on; if (on) prefs.sky = null; savePrefs(); },
+    pace: pace => { state.pace = prefs.pace = pace; clouds.windScale = pace; savePrefs(); },
+    cloudscape: mode => { releaseAll(); clouds.setCloudscape(mode); state.blooms.length = 0; prefs.cloudscape = mode; savePrefs(); },
+    rest: on => {
+      state.paused = on; releaseAll(); state.firing = 0; state.load = 0; bust.setBeam(0, state.aimTarget);
+      if (audio) { on ? audio.suspend() : audio.resume(); }
+      if (on && wake) wake.release().catch(() => {});
+      if (!on) requestWake();
+    },
     // Detail 1 is the plainest sky. The first press leaves Auto and starts from where Auto had settled.
     detail: delta => {
+      if (delta === 'auto') { quality.manual = false; quality.cool = 0; quality.samples = quality.sum = 0; quality.tier = 0; resize(true); return 'Auto'; }
       const top = tiers.length;
       const level = Math.min(top, Math.max(1, top - quality.tier + delta));
       quality.manual = true;
@@ -4210,7 +4444,18 @@ precision highp float; precision highp sampler2D; in vec2 vUv; out vec4 o; unifo
       return level;
     },
   });
-  if (ui) state.daySpeed = DAY_SPEED;
+  if (ui) state.daySpeed = prefs.drift ? DAY_SPEED : 0;
+  if (audio) { audio.setMuted(prefs.muted); audio.setMusicVolume(prefs.music); audio.setSoundVolume(prefs.sound); }
+  const onMotionChange = e => {
+    reducedMotion = e.matches;
+    state.pace = prefs.pace = e.matches ? 0 : 0.55;
+    clouds.windScale = state.pace;
+    if (ui && ui.showPace) ui.showPace(state.pace);
+  };
+  if (motionQuery) {
+    if (motionQuery.addEventListener) motionQuery.addEventListener('change', onMotionChange);
+    else if (motionQuery.addListener) motionQuery.addListener(onMotionChange);
+  }
 
   function steerDay(dt) {
     if (state.dayTo !== null) {
@@ -4219,7 +4464,7 @@ precision highp float; precision highp sampler2D; in vec2 vUv; out vec4 o; unifo
       const step = dt * 0.05;                       // twenty seconds across a whole day at most
       if (Math.abs(d) <= step) { state.day = state.dayTo; state.dayTo = null; }
       else state.day = (state.day + Math.sign(d) * step + 1) % 1;
-    } else state.day = (state.day + state.daySpeed * dt * (state.night ? 0.45 : 1)) % 1;     // the night passes more slowly
+    } else state.day = (state.day + state.daySpeed * dt * state.pace * (state.night ? 0.45 : 1)) % 1;
   }
 
   // Now and then a few birds cross, very far off
@@ -4239,15 +4484,23 @@ precision highp float; precision highp sampler2D; in vec2 vUv; out vec4 o; unifo
 
   // ---- One frame
   function step(dt) {
-    state.time += dt;
+    if (state.paused) return;
+    state.time += dt * state.pace;
+    if (document.activeElement === canvas && keys.size) {
+      P.x = Math.max(0.02, Math.min(0.98, P.x + ((keys.has('ArrowRight') ? 1 : 0) - (keys.has('ArrowLeft') ? 1 : 0)) * dt * 0.3));
+      P.y = Math.max(0.02, Math.min(0.98, P.y + ((keys.has('ArrowDown') ? 1 : 0) - (keys.has('ArrowUp') ? 1 : 0)) * dt * 0.3));
+      state.idle = 0; positionReticle();
+    }
+    for (const bloom of state.blooms) { bloom.goal *= Math.exp(-dt * 0.22); bloom.light += (bloom.goal - bloom.light) * Math.min(1, dt * 0.9); }
+    state.blooms = state.blooms.filter(b => b.goal > 0.008 || b.light > 0.008);
     state.idle = P.down ? 0 : state.idle + dt;      // a long hold is not idleness
     steerDay(dt);
-    if (!TEST || params.has('birds')) moveFlock(dt);
+    if (!TEST || params.has('birds')) moveFlock(dt * state.pace);
 
     // Where the machine should point
     if (P.down || (P.mouse && state.idle < 30)) state.aimTarget = dirFromScreen(P.x, P.y);    // a mouse can steer without pressing
     else if (state.idle > 30) {                     // left alone, it comes slowly to rest, drifting a little
-      state.restT += dt;
+      state.restT += dt * state.pace;
       const a = 0.05 * Math.sin(state.restT * 0.05), c = Math.cos(a), s = Math.sin(a);
       state.aimTarget = [REST[0] * c - REST[2] * s, REST[1], REST[0] * s + REST[2] * c];
     }
@@ -4317,15 +4570,19 @@ precision highp float; precision highp sampler2D; in vec2 vUv; out vec4 o; unifo
     const beamDir = machine ? machine.tubeDir() : state.aim;
     const aimS = screenFromDir(beamDir) || [0.5, 0.5];
     if (machine) { const m = screenFromWorld(machine.muzzle()); state.muzzle = m; } else state.muzzle = [0.5, 0.12];
-    const flash = bust.flash;
+    const bloomUniform = new Float32Array(16);
+    state.blooms.slice(-4).forEach((b, i) => {
+      const at = screenFromDir(b.dir);
+      if (at) bloomUniform.set([at[0], at[1], b.light, 0], i * 4);
+    });
     composite.set({
       uSky: light.lut, uClouds: tex, uShape: clouds.shape, uWeather: clouds.weather, uMap: clouds.map,
       uCamF: state.cam.f, uCamR: state.cam.r, uCamU: state.cam.u,
       uSunDir: light.sunDir, uMoonDir: light.moonDir, uMoon: light.moon, uSunCol: light.sunCol, uSunGround: light.sunGround,
       uHorizonTint: light.ambGround, uBeamTint: [0.5, 0.42, 0.34],
       uCloudSize: [clouds.w, clouds.h], uWind: clouds.wind,
-      uTime: state.time, uExposure: light.exposure, uStars: light.stars, uCirrus: light.cirrus, uFlash: flash,
-      uRays: raysA.tex, uRayGain: rayGain, uAspect: state.W / state.H, uBloomAt: bust.bloomAt ? [bust.bloomAt[0], bust.bloomAt[1]] : [0.5, 0.5],
+      uTime: state.time, uExposure: light.exposure, uStars: light.stars, uCirrus: light.cirrus, uBlooms: bloomUniform,
+      uRays: raysA.tex, uRayGain: rayGain, uAspect: state.W / state.H,
       uBeamLine: [state.muzzle[0], state.muzzle[1], aimS[0], aimS[1]],
       uBeamInfo: [state.firing, 0.03, state.W / state.H],
       uFlock: [state.flock.x, state.flock.y + 0.012 * Math.sin(state.flock.t * 0.21), state.flock.size, state.flock.on ? 1 : 0],
@@ -4378,13 +4635,13 @@ precision highp float; precision highp sampler2D; in vec2 vUv; out vec4 o; unifo
   window.addEventListener('resize', queueResize);
   if (window.visualViewport) window.visualViewport.addEventListener('resize', queueResize);
   bust.onBloom = (size, dir) => {
-    const s = screenFromDir(dir || state.aimTarget);
-    bust.bloomAt = s || [0.5, 0.6];
+    state.blooms.push({ dir: (dir || state.aimTarget).slice(), goal: 0.5 + 0.5 * size, light: 0 });
+    if (state.blooms.length > 4) state.blooms.shift();
     if (audio) audio.event('bloom', { size });
   };
 
   CB.debug = {
-    state, clouds, sky, bust, quality, machine, audio, reducedMotion, govern, dirFromScreen,
+    state, clouds, sky, bust, quality, machine, audio, ui, prefs, get reducedMotion() { return reducedMotion; }, govern, dirFromScreen,
     advance(seconds, fps) {
       const n = Math.max(1, Math.round(seconds * (fps || 8)));
       for (let i = 0; i < n; i++) frame(1 / (fps || 8));
@@ -4418,16 +4675,17 @@ precision highp float; precision highp sampler2D; in vec2 vUv; out vec4 o; unifo
     window.addEventListener('pageshow', resetTiming);
     const loop = now => {
       requestAnimationFrame(loop);
+      if (document.hidden || contextLost || state.paused) { last = now; return; }
       if (clouds.bakeSome(phoneLike ? 4 : 16)) { last = now; return; }
       // A sky left alone changes slowly: half the frames, far less battery
       skip = !skip && state.idle > 45 && !P.down;
-      if (skip || document.hidden || contextLost) return;
+      if (skip) return;
       if (phoneLike && now - last < 1000 / 60 - 0.5) return;
       const ms = now - last;
       const dt = Math.min(0.08, ms / 1000); last = now;
       const measure = quality.slow && warm % 15 === 0;
       const t0 = measure ? performance.now() : 0;
-      frame(reducedMotion ? dt * 0.6 : dt);
+      frame(dt);
       if (measure) { gl.finish(); quality.busySum += performance.now() - t0; quality.busyN++; }
       warm++;
       if (warm === 6) { canvas.classList.add('on'); setTimeout(() => title.classList.remove('on'), 3600); }
