@@ -2,61 +2,71 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#090c10">
-  <title>Get Out of My Woods V3 | Grant Williams</title>
-  <meta name="description" content="A small survival horror game at Camp Stillwater in 1984. Find your car keys and a battery, start the car, and get out.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#04070b">
+  <title>Get Out of My Woods | Free 80s slasher survival horror game</title>
+  <meta name="description" content="A free survival-horror tribute to the summer-camp slashers of the 1980s. Camp Stillwater, 1984: find your keys and a battery, start the car, and get out. Plays in your browser.">
   <link rel="canonical" href="https://grantwilliams.ai/games/get-out-of-my-woods/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Grant Williams">
-  <meta property="og:title" content="Get Out of My Woods V3">
-  <meta property="og:description" content="Camp Stillwater, 1984. Find your car keys and a battery, start the car, and get out. Adult horror.">
+  <meta property="og:title" content="Get Out of My Woods">
+  <meta property="og:description" content="Camp Stillwater, 1984. You stayed behind to lock up. You are not alone. A free survival-horror tribute to 80s summer-camp slashers. Play in your browser.">
   <meta property="og:url" content="https://grantwilliams.ai/games/get-out-of-my-woods/">
-  <meta property="og:image" content="https://grantwilliams.ai/assets/img/games/get-out-of-my-woods-social-v1.png">
+  <meta property="og:image" content="https://grantwilliams.ai/assets/img/games/get-out-of-my-woods-social-v2.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Get Out of My Woods: red handwritten title over a blue fog forest with the killer standing on the road.">
+  <meta property="og:image:alt" content="Get Out of My Woods: red handwritten title over a foggy night forest, the counselor running from the killer.">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Get Out of My Woods V3">
-  <meta name="twitter:description" content="Camp Stillwater, 1984. Find your car keys and a battery, start the car, and get out. Adult horror.">
-  <meta name="twitter:image" content="https://grantwilliams.ai/assets/img/games/get-out-of-my-woods-social-v1.png">
-  <meta name="twitter:image:alt" content="Get Out of My Woods: red handwritten title over a blue fog forest with the killer standing on the road.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;1,400&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/assets/css/games.css">
+  <meta name="twitter:title" content="Get Out of My Woods">
+  <meta name="twitter:description" content="Camp Stillwater, 1984. You stayed behind to lock up. You are not alone. A free survival-horror tribute to 80s summer-camp slashers. Play in your browser.">
+  <meta name="twitter:image" content="https://grantwilliams.ai/assets/img/games/get-out-of-my-woods-social-v2.jpg">
+  <meta name="twitter:image:alt" content="Get Out of My Woods: red handwritten title over a foggy night forest, the counselor running from the killer.">
+  <link rel="preload" href="/assets/fonts/woods/rock-salt-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/woods/oswald-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/css/woods.css">
   <script src="/assets/js/share.js" defer></script>
 </head>
-<body class="game-page woods-page">
-  <a class="skip-link" href="#main-content">Skip to game details</a>
+<body class="woods">
+  <a class="skip-link" href="#play">Skip to the game</a>
 
-  <header class="site-header">
-    <div class="header-inner wrap">
-      <a class="wordmark" href="/games/" aria-label="Grant Williams games">Grant Williams</a>
-      <nav class="site-nav" aria-label="Games navigation">
-        <a href="/games/">The shelf</a>
-        <a href="/games/cloud-buster/">Cloud Buster</a>
-        <a href="/games/get-out-of-my-woods/" aria-current="page">Woods V3</a>
-      </nav>
-    </div>
+  <header class="top">
+    <a class="top-mark" href="/games/" aria-label="Grant Williams games">Grant Williams</a>
+    <nav class="top-nav" aria-label="Site">
+      <a href="/games/">All games</a>
+      <a class="top-play" href="/games/get-out-of-my-woods/play/">Play</a>
+    </nav>
   </header>
 
   <main id="main-content">
-    <section class="game-hero wrap" aria-labelledby="game-title">
-      <nav class="breadcrumbs" aria-label="Breadcrumb">
-        <a href="/games/">Games</a>
-        <span aria-hidden="true">/</span>
-        <span aria-current="page">Get Out of My Woods V3</span>
-      </nav>
-      <p class="eyebrow">01 <span>/</span> V3 <span>/</span> Survival horror</p>
-      <h1 class="game-title" id="game-title">Get Out of My Woods</h1>
-      <p class="game-tagline">Camp Stillwater, 1984. The last night of the season.</p>
-      <p class="game-summary">You stayed behind to lock up. Find your car keys and a battery, start the car, and get out; everything moves between tries.</p>
+    <section class="hero" aria-labelledby="game-title">
+      <div class="hero-film" aria-hidden="true">
+        <video class="hero-video" autoplay muted loop playsinline preload="metadata" poster="/assets/img/games/woods/hero-chase.jpg">
+          <source src="/assets/video/get-out-of-my-woods-loop.mp4" type="video/mp4">
+        </video>
+        <img class="hero-still" src="/assets/img/games/woods/hero-chase.jpg" width="1920" height="1080" alt="">
+      </div>
+      <div class="hero-shade" aria-hidden="true"></div>
+      <div class="hero-grain" aria-hidden="true"></div>
 
-      <aside class="game-announcement" aria-label="Coming soon">
-        <span class="announcement-label">Coming soon</span>
-        <p>Get Out of My Woods V4 arrives Friday, November 13. V3 is here to play until then.</p>
-      </aside>
+      <div class="hero-copy" id="play">
+        <p class="hero-date">Released Friday the 13th <span aria-hidden="true">·</span> November 2026</p>
+        <p class="hero-place">Camp Stillwater <span aria-hidden="true">·</span> 1984</p>
+        <h1 class="hero-title" id="game-title"><span>Get Out</span> <span>Of My</span> <span>Woods</span></h1>
+        <p class="hero-line">The last night of the season. You stayed behind to lock up. You are not alone.</p>
+        <p class="hero-sub">A free survival-horror tribute to the summer-camp slashers of the 1980s. It plays in your browser on a phone, tablet or computer.</p>
+
+        <div class="hero-actions">
+          <a class="btn btn-play" href="/games/get-out-of-my-woods/play/"><span class="btn-big">Play now</span><span class="btn-small">Free, in your browser</span></a>
+          <a class="btn btn-ghost" href="/games/get-out-of-my-woods/download/get-out-of-my-woods.html" download="get-out-of-my-woods.html"><span class="btn-big">Download</span><span class="btn-small">Play offline</span></a>
+        </div>
+
+        <ul class="hero-tags" aria-label="About this game">
+          <li>Free</li>
+          <li>No ads</li>
+          <li>No sign-up</li>
+          <li>Open source</li>
+          <li>Phone, tablet or computer</li>
+        </ul>
 
       <aside class="content-warning" aria-label="Content warning">
         <span class="warning-label">Content warning</span>
@@ -64,62 +74,126 @@
         <p>Adult horror. Flashes can be reduced in Settings.</p>
       </aside>
 
-      <div class="game-actions">
-        <a class="button button-primary" href="/games/get-out-of-my-woods/play/">Play V3 <span aria-hidden="true">&nearr;</span></a>
-        <a class="button button-secondary" href="/games/get-out-of-my-woods/download/get-out-of-my-woods-v3.html" download="get-out-of-my-woods-v3.html">Download HTML</a>
       </div>
-      <p class="download-note">One self-contained HTML file, with desktop and phone controls.</p>
+      <a class="hero-down" href="#night" aria-label="More about the game"><span aria-hidden="true">&darr;</span></a>
+    </section>
 
-      <div class="share-actions" aria-label="Share Get Out of My Woods">
-        <button class="share-button" type="button" data-native-share data-title="Get Out of My Woods V3" data-text="Camp Stillwater, 1984. Find your keys and a battery, start the car, and get out." data-url="https://grantwilliams.ai/games/get-out-of-my-woods/" hidden>Share</button>
-        <button class="share-button" type="button" data-copy-link data-url="https://grantwilliams.ai/games/get-out-of-my-woods/" hidden>Copy link</button>
-        <p class="share-status" data-share-status role="status" aria-live="polite"></p>
+    <section class="band night" id="night" aria-labelledby="night-title">
+      <div class="wrap">
+        <p class="kicker">A tribute to the summer-camp slashers of the 1980s</p>
+        <h2 id="night-title">Everyone else went home.</h2>
+        <p class="lede">It is the last night of the season and you stayed behind to lock up. Your car is at the end of the road, but the keys are gone and so is the battery. Something is walking the camp with a sack over its head and a pitchfork in its hand, and it wants you out of its woods.</p>
+        <ol class="steps">
+          <li><span class="step-n" aria-hidden="true">1</span><h3>Find your car keys.</h3><p>Search cabins, the mess hall, the boathouse and the shed. Places you can search catch your flashlight.</p></li>
+          <li><span class="step-n" aria-hidden="true">2</span><h3>Find a battery.</h3><p>It is heavy. Carrying it, you cannot run as far.</p></li>
+          <li><span class="step-n" aria-hidden="true">3</span><h3>Start the car. Get out.</h3><p>The keys and the battery are never in the same place twice.</p></li>
+        </ol>
       </div>
     </section>
 
-    <figure class="game-shot wrap">
-      <a class="shot-frame" href="/games/get-out-of-my-woods/play/" aria-label="Play Get Out of My Woods V3">
-        <img src="/assets/img/games/get-out-of-my-woods-campfire-v2.png" width="1600" height="900" alt="The counselor faces the killer beside a campfire and cabins in Get Out of My Woods." fetchpriority="high">
-        <span class="shot-play" aria-hidden="true">Play now &nearr;</span>
-      </a>
-      <figcaption><span>A campfire encounter in Get Out of My Woods</span><span>Select the scene to play</span></figcaption>
-    </figure>
-
-    <section class="game-details wrap" aria-label="Controls and survival guide">
-      <div class="detail-panel">
-        <p class="eyebrow">Controls</p>
-        <h2>Get to the car.</h2>
-        <p>Search places that catch your flashlight. The staff map records where you have already looked.</p>
-        <dl class="controls">
-          <div>
-            <dt>Desktop</dt>
-            <dd>WASD or arrows move. Mouse looks. Shift runs, C sneaks, E or Space acts, F toggles the flashlight, Q quick turns, M opens the map, and Esc pauses.</dd>
-          </div>
-          <div>
-            <dt>Phone or tablet</dt>
-            <dd>Left thumb moves. Drag the right side to look. ACTION, RUN, LIGHT, MAP, and PAUSE are on screen. Landscape gives the widest view.</dd>
-          </div>
-        </dl>
+    <section class="band shots" aria-labelledby="shots-title">
+      <div class="wrap">
+        <h2 id="shots-title" class="sr-only">Pictures from the game</h2>
+        <div class="shot-grid">
+          <figure class="shot shot-wide">
+            <img src="/assets/img/games/woods/shot-campfire.jpg" width="1280" height="720" alt="A camp counselor in a yellow staff jacket walks past a campfire toward the cabins at night." decoding="async">
+            <figcaption>Search the camp.</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="/assets/img/games/woods/shot-closet.jpg" width="1280" height="720" alt="Seen through the slats of a closet door, the killer stands just outside." decoding="async">
+            <figcaption>Hide. Hold your breath.</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="/assets/img/games/woods/shot-run.jpg" width="1280" height="720" alt="The counselor runs down a foggy forest road with the killer close behind her." decoding="async">
+            <figcaption>Run.</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="/assets/img/games/woods/shot-map.jpg" width="1280" height="720" alt="The paper staff map of Camp Stillwater, with crosses on the places already searched." decoding="async">
+            <figcaption>Cross off where you have looked.</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="/assets/img/games/woods/shot-car.jpg" width="1280" height="720" alt="From the driver's seat, the killer walks toward the car through the trees." decoding="async">
+            <figcaption>Get to your car.</figcaption>
+          </figure>
+        </div>
+        <p class="shots-cta"><a class="btn btn-play" href="/games/get-out-of-my-woods/play/"><span class="btn-big">Play now</span><span class="btn-small">Free, in your browser</span></a></p>
       </div>
+    </section>
 
-      <div class="detail-panel">
-        <p class="eyebrow">Stay alive</p>
-        <h2>Noise and light give you away.</h2>
-        <p>He hears running and sees your flashlight. Break line of sight and use the buildings. The battery is heavy, so carrying it drains your breath faster.</p>
-        <ul class="option-list">
-          <li>Walk or sneak when he is near.</li>
-          <li>Hide in closets, lockers, and bushes.</li>
-          <li>Choose Reduced flashes in Settings if you need them.</li>
+    <section class="band inside" aria-labelledby="inside-title">
+      <div class="inside-film">
+        <img src="/assets/img/games/woods/killer-road.jpg" width="1600" height="900" alt="The killer, a sack over his head and a pitchfork in his hand, walks out of the fog on the camp road." decoding="async">
+        <div class="wrap">
+          <p class="kicker">What is in the woods</p>
+          <h2 id="inside-title">He hears you run. He sees your light.</h2>
+        </div>
+      </div>
+      <div class="wrap">
+        <ul class="cards">
+          <li><h3>A killer who hunts</h3><p>He follows sound and light, searches where he last saw you, and checks the closets.</p></li>
+          <li><h3>Places to hide</h3><p>Closets, beds and bushes. Break his line of sight first, or he will know where you went.</p></li>
+          <li><h3>Two acts</h3><p>Reaching your car is only the first half of the night.</p></li>
+          <li><h3>A different night every time</h3><p>The keys, the battery and the killer all move between tries.</p></li>
+          <li><h3>Easy, Normal and Hard</h3><p>Easy is for a first night. Hard does not let up.</p></li>
+          <li><h3>Made for this game</h3><p>All of the art, sound and music were made for Get Out of My Woods.</p></li>
         </ul>
+      </div>
+    </section>
+
+    <section class="band how" aria-labelledby="how-title">
+      <div class="wrap how-grid">
+        <div>
+          <p class="kicker">Controls</p>
+          <h2 id="how-title">How to play</h2>
+          <dl class="keys">
+            <div><dt>Computer</dt><dd>WASD or the arrow keys move. Drag the picture to look. R or Shift runs, C sneaks, E or Space acts, F is the flashlight, Q turns you around, M opens the map and Esc pauses.</dd></div>
+            <div><dt>Phone or tablet</dt><dd>Your left thumb moves. Drag the right side to look. ACTION, RUN, LIGHT, MAP and PAUSE are on the screen. Turn the phone sideways for the widest view.</dd></div>
+          </dl>
+        </div>
+        <div class="survive">
+          <p class="kicker">Staying alive</p>
+          <ul>
+            <li>Walk or sneak when he is near. Running is loud.</li>
+            <li>Your flashlight helps you search. It also helps him find you.</li>
+            <li>You get winded. Save your breath for when you need it.</li>
+            <li>If the flashes are too much, choose Reduced flashes in Settings.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="band open" aria-labelledby="open-title">
+      <div class="wrap open-grid">
+        <div>
+          <p class="kicker">Free and open source</p>
+          <h2 id="open-title">Play it, keep it, change it.</h2>
+          <p class="lede">Get Out of My Woods is free under the MIT License. Download the whole game as one file and play it offline, or take the source code and build your own camp.</p>
+          <div class="open-actions">
+            <a class="btn btn-ghost" href="/games/get-out-of-my-woods/download/get-out-of-my-woods.html" download="get-out-of-my-woods.html"><span class="btn-big">Download the game</span><span class="btn-small">One HTML file, about 1.5 MB</span></a>
+            <a class="btn btn-ghost" href="/assets/downloads/get-out-of-my-woods-source.zip" download="get-out-of-my-woods-source.zip"><span class="btn-big">Download the source</span><span class="btn-small">Code, tests and build tools (.zip)</span></a>
+          </div>
+        </div>
+        <div class="note">
+          <p class="kicker">Bugs and ideas</p>
+          <h3>Tell me what you think.</h3>
+          <p>Bug reports and suggestions are welcome. Say what device you played on and what happened.</p>
+          <p><a class="mail" href="mailto:hello@grantwilliams.ai?subject=Get%20Out%20of%20My%20Woods%20feedback">hello@grantwilliams.ai</a></p>
+          <div class="share-actions" aria-label="Share Get Out of My Woods">
+            <button class="share-button" type="button" data-native-share data-title="Get Out of My Woods" data-text="Camp Stillwater, 1984. Find your keys and a battery, start the car, and get out. A free 80s slasher tribute game." data-url="https://grantwilliams.ai/games/get-out-of-my-woods/" hidden>Share</button>
+            <button class="share-button" type="button" data-copy-link data-url="https://grantwilliams.ai/games/get-out-of-my-woods/" hidden>Copy link</button>
+            <p class="share-status" data-share-status role="status" aria-live="polite"></p>
+          </div>
+        </div>
       </div>
     </section>
   </main>
 
-  <footer class="site-footer">
-    <div class="footer-inner wrap">
-      <a class="footer-mark" href="/games/">Grant Williams</a>
-      <p>Small games, made for the joy of it.</p>
-      <p class="footer-meta">No tracking. No cookies.</p>
+  <footer class="foot">
+    <div class="wrap">
+      <p class="foot-title">Get Out of My Woods</p>
+      <p>A game by Grant Williams. &copy; 2026 Grant Williams, MIT License.</p>
+      <p>A non-profit fan homage, not connected with any film or studio. Fonts: Oswald (SIL Open Font License), Special Elite and Rock Salt (Apache License 2.0). Built with three.js (MIT).</p>
+      <p class="foot-meta"><a href="/games/">More games</a> <span aria-hidden="true">·</span> No tracking. No cookies.</p>
     </div>
   </footer>
 </body>
