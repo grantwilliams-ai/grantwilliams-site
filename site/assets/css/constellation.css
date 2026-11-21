@@ -908,3 +908,16 @@ a.ideas-panel:hover { border-color: var(--gold); background: var(--bg-lift); tra
 .ideas-panel .genie-bottle { flex: none; margin-top: 0.3rem; }
 a.ideas-panel:hover .door-enter { color: var(--gold-bright); }
 @media (max-width: 640px) { a.ideas-panel { flex-direction: column; gap: 1.25rem; padding: 1.75rem; } }
+
+/* ---------- 2026-11-21: four-part home layout and the shared related-sites footer ---------- */
+.section-note.lead { color: var(--ink); font-size: clamp(1.25rem, 1.1rem + 0.7vw, 1.6rem); line-height: 1.6; max-width: 48rem; }
+.section-note.lead a, .page-sub a { color: var(--gold-bright); border-bottom: 1px solid var(--line-gold); }
+.doors.two { grid-template-columns: repeat(2, 1fr); }
+.lab-band.one { grid-template-columns: 1fr; margin-top: clamp(1.2rem, 2.5vw, 2rem); }
+#believe .ideas-panel { margin-top: 3.5rem; }
+.fm-band.in-section { margin: clamp(1.2rem, 2.5vw, 2rem) 0 0; }
+.constellation .site { white-space: nowrap; }
+.constellation .what { color: var(--ink-faint); font-size: 0.85em; letter-spacing: 0; text-transform: none; }
+@media (max-width: 64rem) { .doors.two { grid-template-columns: 1fr; } }
+@media (max-width: 46rem) { .constellation .site { white-space: normal; } }
+@media (max-width: 640px) { .hero-split { padding-top: 10.5rem; } }   /* the menu is two lines tall on a phone */
