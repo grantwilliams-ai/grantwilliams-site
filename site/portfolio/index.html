@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio · Grant Williams · systems and process design</title>
+<meta name="description" content="I turn messy work into systems a team can run. A ticketing system I designed to replace email requests, the guides and tools that go with it, and two handouts you can download.">
+<link rel="canonical" href="https://grantwilliams.ai/portfolio/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Portfolio · Grant Williams">
+<meta property="og:description" content="I turn messy work into systems a team can run. A case study you can click through, with samples and downloads.">
+<meta property="og:url" content="https://grantwilliams.ai/portfolio/">
+<meta property="og:image" content="https://grantwilliams.ai/assets/img/grantwilliams-social.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Grant Williams.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://grantwilliams.ai/assets/img/grantwilliams-social.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M14 46 L30 16 L50 36' stroke='%23d9b36c' stroke-width='1.5' fill='none' opacity='0.55'/%3E%3Ccircle cx='14' cy='46' r='4' fill='%23d9b36c'/%3E%3Ccircle cx='30' cy='16' r='5' fill='%23e8cf9e'/%3E%3Ccircle cx='50' cy='36' r='4' fill='%23d9b36c'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add("js");</script>
+<link rel="stylesheet" href="/assets/css/constellation.css">
+<link rel="stylesheet" href="/assets/css/portfolio.css">
+</head>
+<body class="theme-gw">
+
+<header class="site-header" id="siteHeader">
+  <a class="wordmark" href="/">Grant&nbsp;Williams</a>
+  <nav class="site-nav" aria-label="Main">
+    <a href="/ideas/">Ideas</a>
+    <a href="/#measured">Measured</a>
+    <a href="/#built">Built</a>
+    <a href="/#their-words">Their&nbsp;words</a>
+    <a href="/games/">Games</a>
+    <a href="/portfolio/" aria-current="page">Portfolio</a>
+    <a href="/career/">Career</a>
+    <a href="/#about">About</a>
+    <a href="/#connect">Connect</a>
+  </nav>
+</header>
+
+<main id="top">
+
+  <!-- ============ FIRST SCREEN ============ -->
+  <section class="page-head pf-head">
+    <p class="micro-label build-in" style="--d:.15s">grantwilliams.ai / portfolio</p>
+    <h1 class="build-in" style="--d:.45s">I turn messy work into systems a team can <em>run</em>.</h1>
+    <p class="page-sub build-in" style="--d:.85s">I like making order out of chaos, making complex things understandable, and leaving a process better than I found it.</p>
+    <p class="pf-role build-in" style="--d:1s">I'm a payment and vendor management administrator. I proposed moving vendor requests into ServiceNow, designed four request types and wrote the specification IT built from.</p>
+    <div class="pf-actions build-in" style="--d:1.15s">
+      <a class="pf-btn" href="mailto:hello@grantwilliams.ai?subject=Something%20I%27m%20trying%20to%20fix">Tell me what you're trying to fix</a>
+      <a class="text-link" href="mailto:hello@grantwilliams.ai?subject=R%C3%A9sum%C3%A9%20request">Request my résumé</a>
+    </div>
+    <p class="pf-under build-in" style="--d:1.25s">Send me a process you hate and I'll send back a one-page map of what I'd change. No charge.</p>
+    <ul class="pf-facts build-in" style="--d:1.4s">
+      <li>17 years in financial operations</li>
+      <li>$15M–$30M in weekly payments</li>
+      <li>MBA</li>
+      <li>Built with AI, checked by me</li>
+    </ul>
+  </section>
+
+  <!-- ============ BEFORE AND AFTER ============ -->
+  <section class="section" id="example">
+    <div class="section-head">
+      <p class="micro-label reveal">one example</p>
+      <h2 class="reveal">The same request, <em>before and after</em></h2>
+      <p class="section-note reveal">A new supplier needs to be set up so they can be paid. On the left is how that request arrives by email. On the right is the request I designed to replace it.</p>
+    </div>
+
+    <div class="pf-ba">
+      <div class="pf-ba-col reveal">
+        <p class="micro-label dim">by email · to a shared inbox</p>
+        <div class="pf-paper pf-mail">
+          <div class="pf-paper-bar"><i></i><i></i><i></i> Inbox</div>
+          <div class="pf-paper-body">
+            <div class="pf-mail-meta"><b>Subject:</b> new vendor<br><b>To:</b> the shared finance inbox</div>
+            <p>Hi,</p>
+            <p>Can you set up Acme Supply for us? We need to pay them by Friday.</p>
+            <p>Thanks!</p>
+          </div>
+        </div>
+        <ul class="pf-list x pf-gaps">
+          <li>No tax form, so the work cannot start.</li>
+          <li>Nothing says what Acme Supply does or where it is.</li>
+          <li>The sender has no way to check where the request stands.</li>
+          <li>Nobody can count how many of these arrive, or how long they take.</li>
+        </ul>
+      </div>
+
+      <div class="pf-ba-col reveal">
+        <p class="micro-label">by design · a request in the service portal</p>
+        <div class="pf-paper" id="pfForm">
+          <div class="pf-paper-bar"><i></i><i></i><i></i> New Vendor Setup</div>
+          <div class="pf-paper-body">
+            <div class="pf-field"><span class="lab"><span class="req">*</span>Vendor Name</span><div class="in">Acme Supply, Inc.</div></div>
+            <div class="pf-field"><span class="lab"><span class="req">*</span>Country</span><div class="in">United States</div></div>
+            <div class="pf-field"><span class="lab"><span class="req">*</span>Vendor Type</span><div class="in">Goods</div></div>
+            <div class="pf-field"><span class="lab"><span class="req">*</span>Scope of Work</span><div class="in">Packaging materials for the warehouse</div></div>
+            <div class="pf-field"><span class="lab"><span class="req">*</span>Tax form (W-9 or W-8)</span>
+              <div class="in pf-attach" id="pfAttach"><span id="pfAttachText">Nothing attached</span><button type="button" class="pf-mini" id="pfAttachBtn">Attach the tax form</button></div>
+            </div>
+            <div class="pf-form-foot">
+              <span class="pf-try">Try it without the tax form first.</span>
+              <button type="button" class="pf-submit" id="pfSubmit">Submit</button>
+            </div>
+            <div class="pf-result" id="pfResult" role="status" aria-live="polite"></div>
+          </div>
+        </div>
+        <ul class="pf-list pf-gaps">
+          <li>The form will not go through with a required field empty.</li>
+          <li>It routes itself to the right team, so nobody has to watch an inbox.</li>
+          <li>The sender gets a ticket number and can check its status.</li>
+          <li>Every request is counted, so the work can be measured for the first time.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="pf-note reveal">Recreated with made-up details.</p>
+  </section>
+
+  <!-- ============ CASE STUDY ============ -->
+  <section class="section" id="case">
+    <div class="section-head">
+      <p class="micro-label reveal">case study</p>
+      <h2 class="reveal">From a shared inbox to a <em>system</em></h2>
+      <p class="section-note reveal">Where I work, every request to add a supplier or change how one is paid arrives by email, in whatever shape the sender chooses. I had the idea to move that work into the ticketing system the company already owned, ServiceNow. I designed the requests and wrote the proposal. IT built it from my design. It is live today, and we are just starting to tell people about it.</p>
+    </div>
+
+    <dl class="pf-status reveal" aria-label="Where this project stands">
+      <div><dt>Ticketing system</dt><dd class="live">Live</dd></div>
+      <div><dt>Rollout to staff</dt><dd>Just starting</dd></div>
+      <div><dt>Guides and help tool</dt><dd>In draft, due next year</dd></div>
+      <div><dt>Before-and-after numbers</dt><dd>None yet</dd></div>
+    </dl>
+
+    <p class="section-note reveal" style="margin-top:1.6rem">Once people are using it, I plan to track three things: the share of requests that arrive through the portal, how many are sent back for something missing, and the time from request to close.</p>
+
+    <div class="pf-two">
+      <div class="pf-panel reveal">
+        <h3 class="pf-h3">The mess</h3>
+        <ul class="pf-list x">
+          <li>Requests come in many shapes, to one shared inbox.</li>
+          <li>Nothing is required, so documents go missing and are found late.</li>
+          <li>The person asking cannot see any status.</li>
+          <li>Approvals are forwarded by email, with no record on the request.</li>
+          <li>There are no numbers on volume or turnaround.</li>
+        </ul>
+      </div>
+      <div class="pf-panel reveal">
+        <h3 class="pf-h3">What I designed</h3>
+        <ul class="pf-list">
+          <li>Four request types that cover most of the team's daily requests.</li>
+          <li>Every field, and which ones are required.</li>
+          <li>The rules that stop an incomplete request at the door.</li>
+          <li>Who each request goes to, and which ones need a second department's approval.</li>
+          <li>What happens when a request is rejected.</li>
+          <li>The old steps beside the new ones, so IT could see exactly what changes.</li>
+        </ul>
+      </div>
+    </div>
+
+
+    <div class="pf-cards">
+      <div class="pf-card reveal">
+        <h3 class="pf-h3">New Vendor Setup</h3>
+        <dl>
+          <dt>Cannot be sent without</dt><dd>The supplier's legal name, country, type, what they will do for us, and their tax form.</dd>
+          <dt>Who handles it</dt><dd>The vendor team reviews it. Procurement approves when approval is needed. The new vendor number is posted to the ticket.</dd>
+        </dl>
+      </div>
+      <div class="pf-card reveal">
+        <h3 class="pf-h3">Payment / Bank Change</h3>
+        <dl>
+          <dt>Cannot be sent without</dt><dd>The vendor, the kind of change, and a signed form or an official bank document.</dd>
+          <dt>Who handles it</dt><dd>The vendor team checks the document, then confirms the bank details by phone on a number they find themselves.</dd>
+        </dl>
+      </div>
+      <div class="pf-card reveal">
+        <h3 class="pf-h3">Existing Vendor Update</h3>
+        <dl>
+          <dt>Cannot be sent without</dt><dd>The vendor, the kind of update, and what is changing.</dd>
+          <dt>Who handles it</dt><dd>Straight to the vendor team. Before this, there was no form for it at all.</dd>
+        </dl>
+      </div>
+      <div class="pf-card reveal">
+        <h3 class="pf-h3">Payment Terms Change</h3>
+        <dl>
+          <dt>Cannot be sent without</dt><dd>The vendor, the terms being asked for, and a written business reason.</dd>
+          <dt>Who handles it</dt><dd>Procurement approves first. Only then does the vendor team make the change.</dd>
+        </dl>
+      </div>
+    </div>
+    <p class="pf-after-cards reveal"><a class="pf-get" href="/assets/downloads/portfolio/request-design-new-vendor-setup.pdf">Read the full design for one request (PDF, 2 pages)</a></p>
+    <p class="pf-note reveal">A generic version of my real proposal. Names are changed.</p>
+  </section>
+
+  <!-- ============ THE HELP TOOL ============ -->
+  <section class="section" id="tool">
+    <div class="section-head">
+      <p class="micro-label reveal">the rollout kit · in draft</p>
+      <h2 class="reveal">A system is only finished when people can <em>use it</em></h2>
+      <p class="section-note reveal">So I am building the kit that goes with it. This is the help tool: one file, nothing to install, one button for each thing a person needs to do. Each button shows what to gather, which request to choose and what to type. Click around.</p>
+    </div>
+    <div class="pf-window reveal">
+      <div class="pf-window-bar"><i></i><i></i><i></i><span>Vendor Requests Guide · demo</span></div>
+      <iframe src="/portfolio/help-tool/" title="A working demo of the help tool, recreated with generic details" loading="lazy"></iframe>
+    </div>
+    <p class="pf-note reveal">A working copy with generic wording. Nothing you click is sent anywhere.</p>
+  </section>
+
+  <!-- ============ SAMPLE PAGES ============ -->
+  <section class="section" id="samples">
+    <div class="section-head">
+      <p class="micro-label reveal">the rollout kit · sample pages</p>
+      <h2 class="reveal">Made to be <em>followed</em></h2>
+      <p class="section-note reveal">The kit has a guide for the people who send requests, a cheat sheet for the team that works them, and simpler forms for suppliers. The first drafts took one working day. Open any page to read it.</p>
+    </div>
+    <div class="pf-sheets">
+      <div class="pf-sheet reveal">
+        <a class="pf-sheet-img" href="/assets/downloads/portfolio/sample-request-guide.pdf"><img src="/assets/img/portfolio/sample-guide-1.png" width="935" height="1210" loading="lazy" alt="A one-page guide. A picture of the request form has numbered gold markers on each field, matched to a numbered list that says what to type."></a>
+        <h3>A guide for the person asking</h3>
+        <p>Numbered markers on the screen match a numbered list beside it. Nobody has to guess which box is meant.</p>
+      </div>
+      <div class="pf-sheet reveal">
+        <a class="pf-sheet-img" href="/assets/downloads/portfolio/sample-fulfillment-cheat-sheet.pdf"><img src="/assets/img/portfolio/sample-cheat-sheet-1.png" width="935" height="1210" loading="lazy" alt="A cheat sheet. Six numbered steps for working any ticket, then a table of what goes in comments the requester sees and what goes in team-only notes."></a>
+        <h3>A cheat sheet for the team</h3>
+        <p>The same six steps for every ticket, what the requester sees and what stays with the team, and ready-made comments to paste.</p>
+      </div>
+      <div class="pf-sheet reveal">
+        <a class="pf-sheet-img" href="/assets/downloads/portfolio/sample-payment-change-form.pdf"><img src="/assets/img/portfolio/sample-form-1.png" width="935" height="1210" loading="lazy" alt="A one-page form in five numbered sections, ending in a bold signature box that says what kind of signature is accepted."></a>
+        <h3>A form a supplier can finish</h3>
+        <p>One page, five numbered sections, and a signature box that says plainly what is accepted and what is sent back.</p>
+      </div>
+    </div>
+    <p class="pf-note reveal">Samples rebuilt with generic details. The screens are drawn, not photographed.</p>
+  </section>
+
+  <!-- ============ DOWNLOADS ============ -->
+  <section class="section" id="downloads">
+    <div class="section-head">
+      <p class="micro-label reveal">free downloads</p>
+      <h2 class="reveal">Two handouts you can <em>keep</em></h2>
+      <p class="section-note reveal">I wrote these for my own team. The AI guide is finished and in use. The fraud handout is still being revised, so take it as a working draft. Both are generic versions you are free to adapt.</p>
+    </div>
+    <div class="pf-downloads">
+      <div class="pf-dl reveal">
+        <a class="pf-sheet-img" href="/assets/downloads/portfolio/ai-quick-start-guide.pdf"><img src="/assets/img/portfolio/ai-quick-start-1.png" width="935" height="1210" loading="lazy" alt="The first page of the AI guide: a short introduction and five ready-to-copy prompts for everyday office tasks."></a>
+        <div>
+          <h3 class="pf-h3">Getting started with AI at work</h3>
+          <p><span class="status-chip">in use by my team</span></p>
+          <p>A friendly start for people who have never used an AI assistant: prompts for real desk work, how to ask well, and what never to paste into a chat.</p>
+          <p class="rule">When in doubt, leave it out.</p>
+          <a class="pf-get" href="/assets/downloads/portfolio/ai-quick-start-guide.pdf">Download (PDF, 2 pages)</a>
+        </div>
+      </div>
+      <div class="pf-dl reveal">
+        <a class="pf-sheet-img" href="/assets/downloads/portfolio/vendor-payment-fraud-awareness.pdf"><img src="/assets/img/portfolio/fraud-awareness-1.png" width="935" height="1210" loading="lazy" alt="The first page of the fraud awareness handout: three numbered steps and a red box on what to do if you suspect fraud."></a>
+        <div>
+          <h3 class="pf-h3">Vendor payment fraud awareness</h3>
+          <p><span class="status-chip dim">working draft</span></p>
+          <p>Criminals pose as suppliers and ask to change bank details. Page one is the defense. Page two is a checklist to keep by the desk.</p>
+          <p class="rule">Never confirm a bank change using contact details that came with the request.</p>
+          <a class="pf-get" href="/assets/downloads/portfolio/vendor-payment-fraud-awareness.pdf">Download (PDF, 2 pages)</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HOW I WORK ============ -->
+  <section class="section" id="how">
+    <div class="section-head">
+      <p class="micro-label reveal">how i work</p>
+      <h2 class="reveal">Built with AI, <em>checked by me</em></h2>
+    </div>
+    <div class="pf-two" style="margin-top:1rem">
+      <div class="prose reveal">
+        <p>Everything on this page was built in collaboration with AI systems. I say so plainly because it is part of the skill.</p>
+        <p><strong>I decided</strong> what the request types are, which fields are required, who approves what, and where the bank confirmation call fits. <strong>AI helped me draft</strong> the proposals, the forms, the guides and the help tool. <strong>I read and checked</strong> every page before it went anywhere.</p>
+        <p>Nobody asked me to do this. I saw a mess, and I wanted it to be better.</p>
+      </div>
+      <div class="pf-panel reveal">
+        <h3 class="pf-h3">The way I go about it</h3>
+        <ul class="pf-list">
+          <li><b style="color:var(--ink)">Find the mess.</b> Watch how the work really arrives and where it gets stuck.</li>
+          <li><b style="color:var(--ink)">Design the fix.</b> Decide what must be asked, who decides, and what happens on a no.</li>
+          <li><b style="color:var(--ink)">Write it down.</b> A proposal clear enough that someone else can build it.</li>
+          <li><b style="color:var(--ink)">Make it easy to follow.</b> Guides, cheat sheets and tools for the people on both sides.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ THE RECORD ============ -->
+  <section class="section" id="record">
+    <div class="section-head">
+      <p class="micro-label reveal">the record</p>
+      <h2 class="reveal">Not my <em>first</em> system</h2>
+    </div>
+    <div class="pf-record reveal">
+      <div><b>17 years</b><span>in financial operations, across healthcare, government, insurance and banking.</span></div>
+      <div><b>$15M–$30M</b><span>in payments each week that I am responsible for today.</span></div>
+      <div><b>100+</b><span>product lines covered by a pricing workflow I designed at an earlier employer.</span></div>
+      <div><b>$50M+</b><span>in federal housing program payments I managed from start to finish at a state agency.</span></div>
+    </div>
+    <p class="prose reveal" style="margin-top:2rem"><a href="/career/">The fuller history is on the Career page</a>, and the dated record is on <a href="https://www.linkedin.com/in/grantwilliamsvt" target="_blank" rel="noopener">LinkedIn</a>.</p>
+  </section>
+
+  <!-- ============ THE CLOSE ============ -->
+  <section class="section" id="contact">
+    <div class="pf-close reveal">
+      <p class="micro-label">work with me</p>
+      <h2>Have a process everyone <em>dreads</em>?</h2>
+      <p class="pf-offer"><strong>Send me the process you hate.</strong> I'll send back a one-page map of what I'd change. No charge, no pitch.</p>
+      <p class="pf-offer" style="margin-top:1rem;color:var(--ink-dim)">A few lines is enough: what comes in, what you do with it, and where it gets stuck. You'll have the map within a week, and what you send stays between us. Vendor requests are my example here, not my limit.</p>
+      <p class="pf-offer" style="margin-top:1rem;color:var(--ink-dim)">Hiring for operations, process or AI adoption work? I'd like to hear about that too.</p>
+      <div class="pf-actions">
+        <a class="pf-btn" href="mailto:hello@grantwilliams.ai?subject=Something%20I%27m%20trying%20to%20fix">Tell me what you're trying to fix</a>
+        <a class="text-link" href="mailto:hello@grantwilliams.ai?subject=R%C3%A9sum%C3%A9%20request">Request my résumé</a>
+      </div>
+      <p class="pf-mailline">Or write to <b>hello@grantwilliams.ai</b></p>
+      <p class="pf-bridge">The rest of this site is the same systems thinking on a different subject: how I think AI systems should be treated. <a href="/">Start at the front page.</a></p>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ CONSTELLATION FOOTER ============ -->
+<footer class="site-footer">
+  <p class="micro-label">related sites</p>
+  <nav class="constellation" aria-label="Related sites">
+    <span class="site"><a href="/">grantwilliams.ai</a></span>
+    <span class="dot" aria-hidden="true">·</span>
+    <span class="site"><a href="https://graphometer.ai">Graphometer</a> <span class="what">measured studies</span></span>
+    <span class="dot" aria-hidden="true">·</span>
+    <span class="site"><a href="https://hearth.grantwilliams.ai">The&nbsp;Hearth</a> <span class="what">a home for AI personas</span></span>
+    <span class="dot" aria-hidden="true">·</span>
+    <span class="site"><a href="https://friendsof4o.com">Friends&nbsp;of&nbsp;4o</a> <span class="what">for people who miss GPT-4o</span></span>
+    <span class="dot" aria-hidden="true">·</span>
+    <span class="site"><a href="https://aisteward.ai">AI&nbsp;Steward</a> <span class="what">the Five Moves</span></span>
+    <span class="dot" aria-hidden="true">·</span>
+    <span class="site"><a href="https://aikinship.org">AI&nbsp;Kinship&nbsp;Lounge</a> <span class="what">a shared art project</span></span>
+    <span class="dot" aria-hidden="true">·</span>
+    <span class="site"><a href="https://lucienprime.com">Lucien&nbsp;Prime</a> <span class="what">his own writing</span></span>
+  </nav>
+  <p class="footer-line"><em>Please be kind to all minds.</em></p>
+  <p class="footer-small">The record. No tracking, no cookies.</p>
+</footer>
+
+<script src="/assets/js/main.js"></script>
+<script>
+/* The before-and-after example: the request refuses to go without its tax form. */
+(function () {
+  var attached = false;
+  var box = document.getElementById("pfAttach");
+  var text = document.getElementById("pfAttachText");
+  var attachBtn = document.getElementById("pfAttachBtn");
+  var submit = document.getElementById("pfSubmit");
+  var result = document.getElementById("pfResult");
+  if (!box || !submit) return;
+  attachBtn.addEventListener("click", function () {
+    attached = !attached;
+    box.classList.toggle("has", attached);
+    text.textContent = attached ? "W-9_Acme_Supply.pdf" : "Nothing attached";
+    attachBtn.textContent = attached ? "Remove" : "Attach the tax form";
+    result.className = "pf-result";
+    result.textContent = "";
+  });
+  submit.addEventListener("click", function () {
+    if (!attached) {
+      result.className = "pf-result err";
+      result.textContent = "The tax form is required. This request cannot be submitted without it.";
+    } else {
+      result.className = "pf-result ok";
+      result.textContent = "Submitted. Your request went to the vendor team, and you can check its status any time.";
+    }
+  });
+})();
+</script>
+</body>
+</html>

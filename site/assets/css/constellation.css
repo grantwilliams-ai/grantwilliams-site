@@ -937,3 +937,9 @@ a.ideas-panel:hover .door-enter { color: var(--gold-bright); }
   .hero-text > .micro-label { display: none; }          /* the address bar and the menu already say it */
   .hero-text > h1 { margin-top: 0; }
 }
+
+/* ---------- nine menu links still fit on two lines on a phone (Portfolio added 2026-11-21) ---------- */
+@media (max-width: 640px) {
+  .site-nav { gap: 0.5rem 0.7rem; }
+  .site-nav a { font-size: 0.72rem; letter-spacing: 0.08em; }
+}

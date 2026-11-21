@@ -14,6 +14,7 @@
 ## On this site
 
 - [Ideas](https://grantwilliams.ai/ideas/): seven short pieces of his personal philosophy on how AI systems should be treated. These are his beliefs, not measured findings.
+- [Portfolio](https://grantwilliams.ai/portfolio/): his operations and process design work, with a case study, a working demo and free handouts.
 - [Career](https://grantwilliams.ai/career/): 17 years in financial operations, vendor governance and systems design.
 - [Games](https://grantwilliams.ai/games/): free browser games built with AI collaborators.
 

@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="en">
+<!-- Demo for grantwilliams.ai/portfolio. Recreated with generic details. -->
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Vendor Requests Guide</title>
+<style>
+  :root {
+    --brand: #27456b; --brand-dark: #1b3252; --accent: #d1a54a; --gray: #5f6672;
+    --ink: #1c2430; --soft-ink: #3c4654; --tint: #eef2f7; --line: #d5dbe4; --page: #f4f5f7;
+    --red: #B3261E; --amber-bg: #FFF6D6; --amber-ink: #6b4e00;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size: 17px; line-height: 1.5;
+  }
+  a { color: var(--brand); }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 0 20px; }
+
+  /* ---------- top bar and band ---------- */
+  .top { background: #fff; border-bottom: 1px solid var(--line); }
+  .top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 10px; padding-bottom: 10px; }
+  .top .co { font-weight: 700; font-size: 18px; letter-spacing: .2px; color: var(--brand-dark); }
+  .top .team { font-size: 15px; color: var(--gray); text-align: right; }
+  .band { background: var(--brand); color: #fff; border-bottom: 5px solid var(--accent); }
+  .band .wrap { padding-top: 26px; padding-bottom: 26px; }
+  .band h1 { margin: 0; font-size: 34px; line-height: 1.15; font-weight: 700; letter-spacing: -0.3px; }
+  .band p { margin: 8px 0 0; font-size: 19px; color: #dbe5f1; }
+  .back {
+    display: inline-flex; align-items: center; gap: 8px; margin-bottom: 14px;
+    background: rgba(255,255,255,.14); color: #fff; border: 1px solid rgba(255,255,255,.35);
+    border-radius: 999px; padding: 6px 16px 7px 12px; font-size: 16px; font-weight: 600;
+  }
+  .back:hover { background: rgba(255,255,255,.26); }
+
+  main { padding: 26px 0 40px; }
+
+  /* ---------- home tiles ---------- */
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .tile {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 10px; text-align: left;
+    background: #fff; border: 1.5px solid var(--line); border-radius: 14px; padding: 20px 20px 18px;
+    min-height: 168px; transition: border-color .12s, box-shadow .12s, transform .12s;
+  }
+  .tile:hover { border-color: var(--brand); box-shadow: 0 6px 18px rgba(20,40,80,.12); transform: translateY(-2px); }
+  .tile .ic { width: 52px; height: 52px; border-radius: 12px; background: var(--brand); display: flex; align-items: center; justify-content: center; }
+  .tile svg { width: 28px; height: 28px; stroke: #fff; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .tile b { font-size: 20px; line-height: 1.25; color: var(--brand-dark); }
+  .tile span { font-size: 15.5px; color: var(--soft-ink); line-height: 1.4; }
+
+  /* ---------- task page ---------- */
+  .switch { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .switch button {
+    background: #fff; border: 2px solid var(--line); border-radius: 12px; padding: 14px 16px; text-align: left;
+    font-size: 17px; font-weight: 600; color: var(--soft-ink);
+  }
+  .switch button small { display: block; font-size: 14.5px; font-weight: 400; color: var(--gray); margin-top: 2px; }
+  .switch button[aria-pressed="true"] { border-color: var(--brand); background: var(--tint); color: var(--brand-dark); box-shadow: inset 0 0 0 1px var(--brand); }
+  .switch-q { font-weight: 700; margin: 0 0 8px; }
+
+  .sec { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px 18px; margin-bottom: 16px; }
+  .sec h2 { display: flex; align-items: center; gap: 12px; margin: 0 0 12px; font-size: 22px; color: var(--brand-dark); }
+  .sec h2 .n {
+    flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--brand); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700;
+  }
+  .need { list-style: none; margin: 0; padding: 0; }
+  .need li { display: flex; gap: 12px; align-items: flex-start; padding: 9px 0; border-top: 1px solid #edf0f4; }
+  .need li:first-child { border-top: 0; }
+  .need input { width: 22px; height: 22px; margin: 3px 0 0; accent-color: var(--brand); flex: none; }
+  .need label { cursor: pointer; }
+  .need small, .steps small { display: block; font-size: 15px; color: var(--gray); }
+  .tag { display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; border-radius: 6px; padding: 1px 8px; margin-right: 6px; vertical-align: 1px; }
+  .tag.only { background: var(--amber-bg); color: var(--amber-ink); }
+  .tag.or { background: var(--tint); color: var(--brand-dark); }
+  .find { margin-top: 12px; background: var(--tint); border-radius: 10px; padding: 11px 14px; font-size: 15.5px; }
+  .find b.h { display: block; color: var(--brand-dark); margin-bottom: 4px; }
+  .crumb { display: inline-block; background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 1px 8px; font-weight: 600; color: var(--brand-dark); white-space: nowrap; margin: 2px 0; }
+  .nope { margin-top: 12px; border-left: 5px solid var(--red); background: #FCEEEC; border-radius: 0 10px 10px 0; padding: 10px 14px; font-size: 16px; }
+  .nope b { color: var(--red); }
+
+  .steps { list-style: none; counter-reset: s; margin: 0; padding: 0; }
+  .steps li { counter-increment: s; position: relative; padding: 2px 0 14px 42px; }
+  .steps li:last-child { padding-bottom: 2px; }
+  .steps li::before {
+    content: counter(s); position: absolute; left: 0; top: 1px; width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid var(--brand); color: var(--brand-dark); font-weight: 700; font-size: 15px;
+    display: flex; align-items: center; justify-content: center; background: #fff;
+  }
+
+  /* ---------- request preview ---------- */
+  .sn-path { margin: 0 0 12px; font-size: 16px; }
+  .sn { border: 1.5px solid #c9d0da; border-radius: 10px; overflow: hidden; }
+  .sn-head { background: #f1f3f6; border-bottom: 1px solid #c9d0da; padding: 10px 16px; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .sn-head b { font-size: 19px; }
+  .sn-head span { font-size: 14px; color: var(--gray); }
+  .sn-body { padding: 6px 16px 14px; }
+  .sn-row { padding-top: 10px; }
+  .sn-row .lab { font-size: 15px; font-weight: 600; }
+  .sn-row .lab i { color: var(--red); font-style: normal; margin-right: 2px; }
+  .sn-row .box {
+    margin-top: 3px; border: 1px solid #9aa3b0; border-radius: 4px; padding: 7px 10px; background: #fff;
+    color: var(--brand-dark); font-size: 16px; white-space: pre-wrap;
+  }
+  .sn-row .box.pick::after { content: "▾"; float: right; color: var(--gray); }
+  .sn-row .hint { font-size: 14px; color: var(--gray); margin-top: 3px; }
+  .copy {
+    margin-top: 8px; background: var(--brand); color: #fff; border: 0; border-radius: 8px; padding: 7px 16px; font-size: 15.5px; font-weight: 600;
+  }
+  .copy:hover { background: var(--brand-dark); }
+  .copy.done { background: var(--accent); color: #1c2430; }
+  .sn-submit { margin-top: 14px; border: 1.5px solid var(--brand); border-radius: 4px; text-align: center; padding: 6px; font-weight: 600; color: var(--brand-dark); font-size: 15px; }
+  .open-sn {
+    display: inline-block; margin-top: 14px; background: var(--brand); color: #fff; text-decoration: none;
+    border: 0; border-radius: 10px; padding: 10px 20px; font-weight: 600; font-size: 17px;
+  }
+  .open-sn:hover { background: var(--brand-dark); }
+
+  .next { list-style: none; margin: 0; padding: 0; }
+  .next li { position: relative; padding: 0 0 12px 30px; }
+  .next li:last-child { padding-bottom: 0; }
+  .next li::before { content: ""; position: absolute; left: 6px; top: 8px; width: 11px; height: 11px; border-radius: 50%; background: var(--accent); }
+  .next li::after { content: ""; position: absolute; left: 11px; top: 21px; bottom: -6px; width: 2px; background: var(--line); }
+  .next li:last-child::after { display: none; }
+  .note { display: flex; gap: 14px; align-items: flex-start; background: #fff; border: 2px solid var(--brand); border-radius: 14px; padding: 16px 20px; margin-bottom: 16px; }
+  .note .bang { flex: none; width: 32px; height: 32px; border-radius: 50%; background: var(--brand); color: #fff; font-weight: 700; font-size: 19px; display: flex; align-items: center; justify-content: center; }
+  
+  .tools { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+  .ghost { background: #fff; border: 1.5px solid var(--brand); color: var(--brand-dark); border-radius: 10px; padding: 9px 18px; font-weight: 600; font-size: 16px; }
+  .ghost:hover { background: var(--tint); }
+
+  footer { border-top: 1px solid var(--line); background: #fff; }
+  footer .wrap { padding-top: 16px; padding-bottom: 18px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 15.5px; color: var(--soft-ink); }
+  footer .draft { color: var(--gray); font-weight: 600; }
+
+  @media (max-width: 820px) { .tiles { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) {
+    body { font-size: 16px; } .tiles, .switch { grid-template-columns: 1fr; } .tile { min-height: 0; }
+    .band h1 { font-size: 27px; } .top .team { display: none; }
+  }
+  @media print {
+    body { background: #fff; font-size: 12.5pt; }
+    .back, .tools, .copy, .open-sn, .switch-q, .switch button[aria-pressed="false"] { display: none !important; }
+    .band { background: #fff; color: var(--ink); border-bottom: 3px solid var(--brand); }
+    .band p { color: var(--soft-ink); }
+    .sec, .note { break-inside: avoid; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="wrap">
+    <div class="co">Company Name</div>
+    <div class="team">Vendor Team</div>
+  </div>
+</div>
+
+<div class="band"><div class="wrap" id="band"></div></div>
+<main><div class="wrap" id="view"></div></main>
+
+<footer>
+  <div class="wrap">
+    <span>Questions? Email the Vendor Team.</span>
+    <span class="draft">Demo · recreated with generic details · nothing is sent anywhere</span>
+  </div>
+</footer>
+
+<script>
+/* =====================================================================
+   EVERYTHING THE GUIDE SAYS LIVES IN THIS BLOCK.
+   To change wording, edit the text between the quotes. Nothing else
+   in the file needs to change.
+   ===================================================================== */
+const CATALOG_PATH = ["Service Catalog", "Finance Requests"];
+const FORMS_PATH = ["Company intranet", "Finance", "Forms"];
+const WHO = { label: "Who is this request for?", enter: "Your name", req: true, pick: true };
+const VNUM = { label: "Vendor Number", enter: "The vendor's number", req: true };
+const VNAME = { label: "Vendor Name", enter: "The vendor's name", req: true };
+
+const TASKS = [
+  {
+    id: "new-vendor",
+    icon: '<path d="M4 21V8l8-4 8 4v13"/><path d="M9 21v-5h6v5"/><path d="M12 8.5v4M10 10.5h4"/>',
+    title: "Add a new vendor",
+    blurb: "A company or person we have not bought from or paid before.",
+    need: [
+      { text: "Completed <b>Vendor Registration Form</b>" },
+      { text: "<b>W-9</b> for a U.S. vendor, or <b>W-8</b> for a vendor outside the U.S." },
+      { tag: "only", tagText: "Only for bank payment", text: "Signed <b>Payment Change Form</b>", small: "Signed by hand in ink, or with a certified digital signature." }
+    ],
+    forms: ["Vendor Registration Form", "Payment Change Form"],
+    steps: [
+      { text: "Send the vendor the <b>Vendor Registration Form</b>.", small: "If they want to be paid by bank transfer, send the Payment Change Form too." },
+      { text: "Check what comes back.", small: "Every required field is filled in. The company name matches the W-9. The W-9 is signed." },
+      { text: "Open the service portal and choose <b>New Vendor Setup</b>." },
+      { text: "Fill it in as shown below, attach the documents, and press <b>Submit</b>." }
+    ],
+    sn: {
+      item: "New Vendor Setup",
+      fields: [
+        WHO,
+        { label: "Country", enter: "The vendor's country", req: true, pick: true },
+        { label: "Vendor Type", enter: "Goods, Services or Other", req: true, pick: true },
+        { label: "Vendor Name", enter: "Legal name, exactly as on the W-9", req: true },
+        { label: "Scope of Work", enter: "What this vendor will do for us", req: true },
+        { label: "Add attachments", enter: "Vendor Registration Form\nW-9 or W-8\nPayment Change Form (only for bank payment)", req: true }
+      ]
+    },
+    next: [
+      "The Vendor Team reviews your request.",
+      "Procurement approves most new vendors.",
+      "The vendor goes through compliance screening.",
+      "The vendor is entered. The new vendor number is posted to your ticket.",
+      "<b>Bank payment:</b> the vendor starts on paper check. We switch to bank transfer after we confirm the bank details by phone. If we cannot reach the vendor, they stay on check."
+    ]
+  },
+  {
+    id: "payment-method",
+    icon: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10.5h18M7 15h4"/>',
+    title: "Change how a vendor is paid",
+    blurb: "Start bank payment, change a bank account, or switch to check or virtual card.",
+    question: "What is the vendor changing to?",
+    variants: [
+      {
+        id: "bank", label: "Bank payment, or a new bank account", sub: "A document is needed",
+        needIntro: "One of these three documents:",
+        need: [
+          { tag: "or", tagText: "Best", text: "Signed <b>Payment Change Form</b>", small: "Signed by hand in ink, or with a certified digital signature that carries a time stamp." },
+          { tag: "or", tagText: "Or", text: "A <b>bank notice</b> that identifies the account" },
+          { tag: "or", tagText: "Or", text: "Official payment instructions on the <b>vendor's letterhead</b>" }
+        ],
+        nope: "<b>Not accepted:</b> bank details typed into an email.",
+        forms: ["Payment Change Form"],
+        steps: [
+          { text: "Send the vendor the <b>Payment Change Form</b>.", small: "A finance officer or authorized representative of the vendor signs it." },
+          { text: "Check the signature.", small: "A typed name or a pasted picture of a signature is returned." },
+          { text: "Check the phone number on the form.", small: "It must appear on the vendor's website or on an invoice we already have on file. A number that arrives with the request cannot be used." },
+          { text: "Open the service portal and choose <b>Payment / Bank Change</b>." },
+          { text: "Fill it in as shown below, attach the document, and press <b>Submit</b>." }
+        ],
+        sn: {
+          item: "Payment / Bank Change",
+          fields: [ WHO, VNUM, VNAME,
+            { label: "Change Type", enter: "New bank payment setup, or bank change", req: true, pick: true },
+            { label: "Add attachments", enter: "Signed Payment Change Form, or the bank document", req: true }
+          ]
+        },
+        next: [
+          "The Vendor Team checks the document.",
+          "We call the vendor to confirm the bank details, using a number we can check ourselves.",
+          "Once confirmed, the vendor is switched to bank payment and your ticket is closed.",
+          "If we cannot reach the vendor, they stay on paper check."
+        ],
+        note: "<b>Got an email asking to change a vendor's bank account?</b> Do not act on it, and do not call the phone number in that email. Send the vendor the Payment Change Form and submit it through the service portal."
+      },
+      {
+        id: "check", label: "Paper check or virtual card", sub: "No document needed",
+        need: [
+          { text: "The vendor's number and name" },
+          { text: "The <b>payment address</b>, confirmed with the vendor" },
+          { text: "Which they want: <b>paper check</b> or <b>virtual card</b>" }
+        ],
+        steps: [
+          { text: "Confirm the payment address with the vendor." },
+          { text: "Open the service portal and choose <b>Existing Vendor Update</b>." },
+          { text: "Fill it in as shown below and press <b>Submit</b>." }
+        ],
+        sn: {
+          item: "Existing Vendor Update",
+          fields: [ WHO, VNUM, VNAME,
+            { label: "Update Type", enter: "Other", req: true, check: true },
+            { label: "Relevant Changed Fields", req: true, copy: "Change payment method to: paper check / virtual card\nPayment address confirmed with the vendor:\n" }
+          ]
+        },
+        next: [
+          "The Vendor Team makes the change and closes your ticket.",
+          "<b>Virtual card:</b> someone contacts the vendor to confirm their choice before it starts."
+        ]
+      }
+    ]
+  },
+  {
+    id: "payment-address",
+    icon: '<path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+    title: "Add a payment address",
+    blurb: "A new address to send a vendor's payments to, for one business unit.",
+    need: [
+      { text: "The vendor's number and name" },
+      { text: "Which <b>business unit</b> the address is for" },
+      { text: "The <b>new payment address</b>", small: "Copying an address the vendor already has? Say which one to copy instead." }
+    ],
+    steps: [
+      { text: "Open the service portal and choose <b>Existing Vendor Update</b>." },
+      { text: "Fill it in as shown below and press <b>Submit</b>." }
+    ],
+    sn: {
+      item: "Existing Vendor Update",
+      fields: [ WHO, VNUM, VNAME,
+        { label: "Update Type", enter: "Address Change", req: true, check: true },
+        { label: "Relevant Changed Fields", req: true, copy: "Add payment address\nBusiness unit:\nNew payment address:\n(or) Copy this existing payment address:\n" }
+      ]
+    },
+    next: [ "The Vendor Team adds the payment address and closes your ticket." ]
+  },
+  {
+    id: "ordering-address",
+    icon: '<path d="M3 4h2l2.4 11h10.2L20 7H6.2"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/>',
+    title: "Add an ordering address",
+    blurb: "An address our buyers place orders with.",
+    need: [
+      { text: "The vendor's number and name" },
+      { text: "Which <b>business unit</b> the address is for" },
+      { text: "The <b>ordering address</b>" },
+      { text: "The <b>payment address</b> the vendor gave you, if any" }
+    ],
+    steps: [
+      { text: "Open the service portal and choose <b>Existing Vendor Update</b>." },
+      { text: "Fill it in as shown below and press <b>Submit</b>." }
+    ],
+    sn: {
+      item: "Existing Vendor Update",
+      fields: [ WHO, VNUM, VNAME,
+        { label: "Update Type", enter: "Address Change", req: true, check: true },
+        { label: "Relevant Changed Fields", req: true, copy: "Add ordering address\nBusiness unit:\nOrdering address:\nPayment address from the vendor (if any):\n" }
+      ]
+    },
+    next: [ "The Vendor Team adds the ordering address and closes your ticket." ]
+  },
+  {
+    id: "payment-terms",
+    icon: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/><path d="M9 15l2 2 4-4"/>',
+    title: "Change payment terms",
+    blurb: "For example, from payment in 30 days to payment in 45. Procurement approves first.",
+    need: [
+      { text: "The vendor's number and name" },
+      { text: "The <b>terms</b> you are asking for" },
+      { text: "The <b>business reason</b> for the change" }
+    ],
+    steps: [
+      { text: "Open the service portal and choose <b>Payment Terms Change</b>." },
+      { text: "Fill it in as shown below and press <b>Submit</b>." }
+    ],
+    sn: {
+      item: "Payment Terms Change",
+      fields: [ WHO, VNUM, VNAME,
+        { label: "Requested Terms", enter: "Pick the new terms", req: true, pick: true },
+        { label: "Justification", enter: "The business reason for the change", req: true }
+      ]
+    },
+    next: [
+      "Your request goes to <b>Procurement</b> first.",
+      "If Procurement approves, the Vendor Team enters the new terms and closes your ticket.",
+      "If Procurement does not approve, the ticket comes back to you with comments."
+    ],
+    note: "<b>Procurement sets payment terms.</b> The Vendor Team cannot change terms until Procurement approves."
+  },
+  {
+    id: "update-vendor",
+    icon: '<path d="M4 20h4L18.5 9.5l-4-4L4 16v4z"/><path d="M13 7l4 4"/>',
+    title: "Update vendor details",
+    blurb: "A new name, address, contact or tax ID for a vendor we already have.",
+    need: [
+      { text: "The vendor's number and name" },
+      { text: "<b>What is changing</b>: the old value and the new value" },
+      { tag: "only", tagText: "Name or tax ID", text: "The vendor's new <b>W-9</b>" }
+    ],
+    steps: [
+      { text: "Open the service portal and choose <b>Existing Vendor Update</b>." },
+      { text: "Fill it in as shown below and press <b>Submit</b>." }
+    ],
+    sn: {
+      item: "Existing Vendor Update",
+      fields: [ WHO, VNUM, VNAME,
+        { label: "Update Type", enter: "Address Change, Contact Update, Tax ID Change, Name Change or Other", req: true, check: true },
+        { label: "Relevant Changed Fields", req: true, copy: "What is changing:\nOld value:\nNew value:\n" },
+        { label: "Add attachments", enter: "New W-9 (name or tax ID change)" }
+      ]
+    },
+    next: [ "The Vendor Team makes the update and closes your ticket." ],
+    note: "<b>Changing a bank account?</b> That is not a vendor update. Go back and choose <b>Change how a vendor is paid</b>."
+  }
+];
+/* ===================== end of the wording block ===================== */
+
+const $ = (id) => document.getElementById(id);
+const crumbs = (parts) => parts.map(p => `<span class="crumb">${p}</span>`).join(" › ");
+
+function home() {
+  document.title = "Vendor Requests Guide";
+  $("band").innerHTML = `<h1 tabindex="-1" id="top-h">Vendor Requests Guide</h1><p>What do you need to do?</p>`;
+  $("view").innerHTML = `<div class="tiles">` + TASKS.map(t => `
+    <button class="tile" data-go="${t.id}">
+      <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true">${t.icon}</svg></span>
+      <b>${t.title}</b><span>${t.blurb}</span>
+    </button>`).join("") + `</div>`;
+}
+
+function needHtml(c, key) {
+  let h = c.needIntro ? `<p style="margin:0 0 4px">${c.needIntro}</p>` : "";
+  h += `<ul class="need">` + c.need.map((n, i) => `
+    <li><input type="checkbox" id="${key}-n${i}"><label for="${key}-n${i}">
+      ${n.tag ? `<span class="tag ${n.tag}">${n.tagText}</span>` : ""}${n.text}
+      ${n.small ? `<small>${n.small}</small>` : ""}</label></li>`).join("") + `</ul>`;
+  if (c.nope) h += `<div class="nope">${c.nope}</div>`;
+  if (c.forms) h += `<div class="find"><b class="h">Where to find ${c.forms.length > 1 ? "the forms" : "the form"}</b>
+      ${crumbs(FORMS_PATH)}<br>Look for: ${c.forms.map(f => `<b>${f}</b>`).join(" and ")}</div>`;
+  return h;
+}
+
+function snHtml(sn) {
+  const rows = sn.fields.map((f, i) => {
+    const lab = `<div class="lab">${f.req ? "<i>*</i>" : ""}${f.label}</div>`;
+    if (f.copy) return `<div class="sn-row">${lab}<div class="box" id="copy-${i}">${f.copy}</div>
+      <div class="hint">Copy this, paste it into the field, and fill in the blanks.</div>
+      <button class="copy" data-copy="copy-${i}">Copy text</button></div>`;
+    return `<div class="sn-row">${lab}<div class="box${f.pick ? " pick" : ""}">${f.enter}</div>
+      ${f.check ? `<div class="hint">Tick this box in the list.</div>` : ""}</div>`;
+  }).join("");
+  return `<p class="sn-path">${crumbs(CATALOG_PATH.concat(sn.item))}</p>
+    <div class="sn"><div class="sn-head"><b>${sn.item}</b><span>What to enter in each field</span></div>
+    <div class="sn-body">${rows}<div class="sn-submit">Submit</div></div></div>
+    <button class="open-sn" data-demo>Open the service portal</button>`;
+}
+
+function task(t, variantId) {
+  document.title = t.title + " · Vendor Requests Guide";
+  $("band").innerHTML = `<button class="back" data-go="">← All tasks</button>
+    <h1 tabindex="-1" id="top-h">${t.title}</h1><p>${t.blurb}</p>`;
+  const v = t.variants ? (t.variants.find(x => x.id === variantId) || null) : t;
+  let h = "";
+  if (t.variants) {
+    h += `<p class="switch-q">${t.question}</p><div class="switch">` + t.variants.map(x => `
+      <button data-go="${t.id}/${x.id}" aria-pressed="${v && v.id === x.id}">${x.label}<small>${x.sub}</small></button>`).join("") + `</div>`;
+  }
+  if (v) {
+    const key = t.id + (v.id && v !== t ? "-" + v.id : "");
+    h += `<section class="sec"><h2><span class="n">1</span>What you need</h2>${needHtml(v, key)}</section>
+      <section class="sec"><h2><span class="n">2</span>What to do</h2>
+        <ol class="steps">${v.steps.map(s => `<li>${s.text}${s.small ? `<small>${s.small}</small>` : ""}</li>`).join("")}</ol></section>
+      <section class="sec"><h2><span class="n">3</span>Fill in the request like this</h2>${snHtml(v.sn)}</section>
+      <section class="sec"><h2><span class="n">4</span>What happens next</h2>
+        <ul class="next">${v.next.map(n => `<li>${n}</li>`).join("")}</ul></section>`;
+    if (v.note) h += `<div class="note"><span class="bang">!</span><div>${v.note}</div></div>`;
+    h += `<div class="tools"><button class="ghost" data-go="">← All tasks</button></div>`;
+  }
+  $("view").innerHTML = h;
+}
+
+let current = "";   // which page is showing, for example "payment-method/ach"
+
+function readAddress() {
+  try { return decodeURIComponent(location.hash.replace(/^#/, "")); } catch (e) { return ""; }
+}
+
+function render(moveFocus) {
+  const [id, variant] = current.split("/");
+  const t = TASKS.find(x => x.id === id);
+  if (t) task(t, variant); else home();
+  if (moveFocus) { window.scrollTo(0, 0); const h1 = $("top-h"); if (h1) h1.focus({ preventScroll: true }); }
+}
+
+// Show a page. The address bar is updated when the browser allows it, so the
+// Back button works, but the guide does not depend on it.
+function go(target, keepPlace) {
+  if (target === current) return;
+  current = target;
+  try {
+    if (keepPlace) history.replaceState(null, "", "#" + target);
+    else history.pushState(null, "", "#" + target);
+  } catch (e) { /* some hosts do not allow it; the page still changes */ }
+  render(!keepPlace);
+}
+
+function copyText(text, btn) {
+  const ok = () => { btn.textContent = "Copied"; btn.classList.add("done"); setTimeout(() => { btn.textContent = "Copy text"; btn.classList.remove("done"); }, 1800); };
+  const fallback = () => {
+    const ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    let done = false; try { done = document.execCommand("copy"); } catch (e) {}
+    if (done) ok(); else btn.textContent = "Select the text and press Ctrl+C";
+    ta.remove();
+  };
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(ok, fallback); else fallback();
+}
+
+document.addEventListener("click", (e) => {
+  const link = e.target.closest("[data-go]");
+  if (link) { go(link.dataset.go, link.dataset.go.includes("/")); return; }
+  const cp = e.target.closest("[data-copy]");
+  if (cp) { copyText($(cp.dataset.copy).textContent, cp); return; }
+  const demo = e.target.closest("[data-demo]");
+  if (demo) demo.textContent = "In the real tool, this opens the company's portal";
+});
+window.addEventListener("popstate", () => { current = readAddress(); render(true); });
+current = readAddress();
+render(false);
+</script>
+</body>
+</html>
