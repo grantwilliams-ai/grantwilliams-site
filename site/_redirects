@@ -17,8 +17,8 @@
 
 # old top-level pages -> home sections
 /about /#about 301
-/projects /#work 301
-/research /#research 301
+/projects /#built 301
+/research /#measured 301
 /connect /#connect 301
 
 # The Lounge lives at its own site (Grant's ruling 2026-08-16).
