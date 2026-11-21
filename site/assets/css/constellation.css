@@ -921,3 +921,19 @@ a.ideas-panel:hover .door-enter { color: var(--gold-bright); }
 @media (max-width: 64rem) { .doors.two { grid-template-columns: 1fr; } }
 @media (max-width: 46rem) { .constellation .site { white-space: normal; } }
 @media (max-width: 640px) { .hero-split { padding-top: 10.5rem; } }   /* the menu is two lines tall on a phone */
+
+/* Phone: name and title first, then the picture, so the picture shows on the first screen (Grant, 2026-11-21). */
+@media (max-width: 46rem) {
+  .hero-split { gap: 0; }
+  .hero-text { display: contents; }
+  .hero-text > .micro-label { order: 1; }
+  .hero-text > h1 { order: 2; }
+  .hero-text > .hero-role { order: 3; }
+  .hero-portrait { order: 4; margin: 0.3rem 0 2rem; }
+  .hero-text > .hero-line { order: 5; }
+  .hero-text > .hero-benediction { order: 6; }
+}
+@media (max-width: 640px) {
+  .hero-text > .micro-label { display: none; }          /* the address bar and the menu already say it */
+  .hero-text > h1 { margin-top: 0; }
+}
