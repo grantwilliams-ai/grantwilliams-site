@@ -236,7 +236,11 @@ ul, ol { list-style: none; }
   .hero-date { margin-bottom: 8px; font-size: 12px; }
   .hero-place { font-size: 14px; }
   .hero-line { font-size: 1.05rem; }
-  .hero-sub, .hero-tags, .hero-down, .hero .content-warning { display: none; }
+  .hero-sub, .hero-tags, .hero-down { display: none; }
+  /* the content warning stays on a phone held sideways, on one small line (2026-11-22) */
+  .hero .content-warning { margin-top: 8px; padding-left: 10px; font-size: 0.8rem; line-height: 1.3; max-width: none; }
+  .hero .content-warning .warning-label { display: inline; margin-right: 0.6em; font-size: 11px; }
+  .hero .content-warning p { display: inline; margin: 0; }
   .hero-actions { margin-top: 12px; flex-wrap: nowrap; }
   .hero-actions .btn { width: auto; min-height: 58px; padding-block: 8px; }
 }

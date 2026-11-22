@@ -209,7 +209,7 @@ const TASKS = [
         WHO,
         { label: "Country", enter: "The vendor's country", req: true, pick: true },
         { label: "Vendor Type", enter: "Goods, Services or Other", req: true, pick: true },
-        { label: "Vendor Name", enter: "Legal name, exactly as on the W-9", req: true },
+        { label: "Vendor Name", enter: "Legal name, exactly as on the W-9 or W-8", req: true },
         { label: "Scope of Work", enter: "What this vendor will do for us", req: true },
         { label: "Add attachments", enter: "Vendor Registration Form\nW-9 or W-8\nPayment Change Form (only for bank payment)", req: true }
       ]
@@ -241,7 +241,7 @@ const TASKS = [
         forms: ["Payment Change Form"],
         steps: [
           { text: "Send the vendor the <b>Payment Change Form</b>.", small: "A finance officer or authorized representative of the vendor signs it." },
-          { text: "Check the signature.", small: "A typed name or a pasted picture of a signature is returned." },
+          { text: "Check the signature.", small: "A form with a typed name or a pasted picture of a signature is sent back." },
           { text: "Check the phone number on the form.", small: "It must appear on the vendor's website or on an invoice we already have on file. A number that arrives with the request cannot be used." },
           { text: "Open the service portal and choose <b>Payment / Bank Change</b>." },
           { text: "Fill it in as shown below, attach the document, and press <b>Submit</b>." }
@@ -250,7 +250,7 @@ const TASKS = [
           item: "Payment / Bank Change",
           fields: [ WHO, VNUM, VNAME,
             { label: "Change Type", enter: "New bank payment setup, or bank change", req: true, pick: true },
-            { label: "Add attachments", enter: "Signed Payment Change Form, or the bank document", req: true }
+            { label: "Add attachments", enter: "Signed Payment Change Form, the bank document, or payment instructions on the vendor's letterhead", req: true }
           ]
         },
         next: [
