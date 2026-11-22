@@ -11,7 +11,7 @@
     meadow_2 (Meadow, day), dry_orchard_meadow (Orchard, day), moonlit_golf (Night),
     rogland_clear_night (Stars), dark_autumn_forest (Autumn wood), lakeside_night (Lake, night), lakeside_dawn (Lake, dawn).
   The stars, the moon, its path on the water, the falling leaves and the shooting stars are drawn by the page.
-  Hosted play loads full-quality scenes from scenes/; the standalone download embeds optimized scenes.
+  Hosted play loads 6144-wide scenes from scenes/; the standalone download embeds smaller ones.
   No libraries are required.
 -->
 <style>
@@ -170,16 +170,16 @@
       water: the ground plane is water beyond waterFrom metres (the moon's path).
    ============================================================ */
 const SCENES = {
-  meadow:    { name: "Meadow",       src: "scenes/meadow.jpg",     night: 0, captureHeight: 1.65, yaw: 0.00,  exposure: 1.00, horizonFade: [28, 70], creakGain: 1.0, skyLum: 0.55 },
-  orchard:   { name: "Orchard",      src: "scenes/orchard.jpg",    night: 0, captureHeight: 1.60, yaw: 0.00,  exposure: 1.00, horizonFade: [28, 70], creakGain: 1.0, skyLum: 0.55 },
-  lakedawn:  { name: "Lake, dawn",   src: "scenes/lakedawn.jpg",  night: 0, captureHeight: 1.60, yaw: -0.12, exposure: 1.00, horizonFade: [10, 30], creakGain: 1.0, skyLum: 0.50, water: 1, waterFrom: 1.6,
+  meadow:    { name: "Meadow",       src: "scenes/meadow.webp",     night: 0, captureHeight: 1.65, yaw: 0.00,  exposure: 1.00, horizonFade: [28, 70], creakGain: 1.0, skyLum: 0.55 },
+  orchard:   { name: "Orchard",      src: "scenes/orchard.webp",    night: 0, captureHeight: 1.60, yaw: 0.00,  exposure: 1.00, horizonFade: [28, 70], creakGain: 1.0, skyLum: 0.55 },
+  lakedawn:  { name: "Lake, dawn",   src: "scenes/lakedawn.webp",  night: 0, captureHeight: 1.60, yaw: -0.12, exposure: 1.00, horizonFade: [10, 30], creakGain: 1.0, skyLum: 0.50, water: 1, waterFrom: 1.6,
                moonDir: [0.72, 0.52, 0.25] },
-  autumn:    { name: "Autumn wood",  src: "scenes/autumn.jpg",     night: 0, captureHeight: 1.60, yaw: 0.00,  exposure: 1.00, horizonFade: [12, 34], creakGain: 1.1, skyLum: 0.62,
+  autumn:    { name: "Autumn wood",  src: "scenes/autumn.webp",     night: 0, captureHeight: 1.60, yaw: 0.00,  exposure: 1.00, horizonFade: [12, 34], creakGain: 1.1, skyLum: 0.62,
                dusk: 1, leaves: 1, owl: 1, moonDir: [0.55, 0.62, -0.30], moon: 1 },
-  night:     { name: "Night",        src: "scenes/night.jpg",      night: 1, captureHeight: 1.60, yaw: -0.23, exposure: 1.15, horizonFade: [24, 60], creakGain: 0.8, skyLum: 0.10, moonInPhoto: 1 },
-  stars:     { name: "Stars",        src: "scenes/stars.jpg",      night: 1, captureHeight: 1.60, yaw: 0.00,  exposure: 0.90, gamma: 1.35, horizonFade: [22, 58], creakGain: 0.8, skyLum: 0.07,
+  night:     { name: "Night",        src: "scenes/night.webp",      night: 1, captureHeight: 1.60, yaw: -0.23, exposure: 1.15, horizonFade: [24, 60], creakGain: 0.8, skyLum: 0.10, moonInPhoto: 1 },
+  stars:     { name: "Stars",        src: "scenes/stars.webp",      night: 1, captureHeight: 1.60, yaw: 0.00,  exposure: 0.90, gamma: 1.35, horizonFade: [22, 58], creakGain: 0.8, skyLum: 0.07,
                stars: 1, moon: 1, moonDir: [0.70, 0.52, 0.30], meteors: 1 },
-  lakenight: { name: "Lake, night",  src: "scenes/lakenight.jpg", night: 1, captureHeight: 1.60, yaw: -0.12, exposure: 0.95, gamma: 1.15, horizonFade: [10, 30], creakGain: 0.8, skyLum: 0.09,
+  lakenight: { name: "Lake, night",  src: "scenes/lakenight.webp", night: 1, captureHeight: 1.60, yaw: -0.12, exposure: 0.95, gamma: 1.15, horizonFade: [10, 30], creakGain: 0.8, skyLum: 0.09,
                stars: 1, moon: 1, moonDir: [0.80, 0.36, 0.18], water: 1, waterFrom: 1.6, meteors: 1 }
 };
 const SCENE_ORDER = ["meadow", "orchard", "lakedawn", "autumn", "night", "stars", "lakenight"];
@@ -520,11 +520,25 @@ function initGL() {
   for (const n of ["uTex", "uEye", "uF", "uU", "uR", "uTanHalf", "uAspect", "uCapH", "uFade", "uYaw", "uExposure", "uGamma", "uNight", "uSpeed", "uBlur", "uFade0",
                    "uDusk", "uStars", "uMoon", "uMoonDir", "uTime", "uSkyLum", "uWater", "uWaterFrom"]) uni[n] = gl.getUniformLocation(prog, n);
 }
+// A picture the graphics card cannot take as it is (too large, or an odd size on an older phone)
+// is drawn smaller, to a power-of-two size, before it is handed over. Added 2026-11-22 with the 6144-wide scenes.
+function fitForGL(img) {
+  const max = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+  const gl2 = typeof WebGL2RenderingContext !== "undefined" && gl instanceof WebGL2RenderingContext;
+  const pot = n => (n & (n - 1)) === 0;
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  if (w <= max && h <= max && (gl2 || (pot(w) && pot(h)))) return img;
+  let tw = 1; while (tw * 2 <= Math.min(w, max)) tw *= 2;
+  let th = 1; while (th * 2 <= Math.min(h, max)) th *= 2;
+  const c = document.createElement("canvas"); c.width = tw; c.height = th;
+  c.getContext("2d").drawImage(img, 0, 0, tw, th);
+  return c;
+}
 function makeTexture(img) {
   const t = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, t);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, fitForGL(img));
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
