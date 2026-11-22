@@ -2,3 +2,13 @@
   X-Robots-Tag: noindex, nofollow, noarchive
   Referrer-Policy: no-referrer
   Cache-Control: no-store, no-transform
+
+# Game files: tell search engines that each game's own page is the one to list (added 2026-11-22).
+/games/:game/play/
+  Link: <https://grantwilliams.ai/games/:game/>; rel="canonical"
+/games/:game/download/*
+  Link: <https://grantwilliams.ai/games/:game/>; rel="canonical"
+/games/:game/original/
+  Link: <https://grantwilliams.ai/games/:game/>; rel="canonical"
+/games/:game/v2/
+  Link: <https://grantwilliams.ai/games/:game/>; rel="canonical"

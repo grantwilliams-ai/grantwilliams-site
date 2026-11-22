@@ -6,6 +6,7 @@
 
 (function () {
   "use strict";
+  window.gwReady = true; /* tells the page head that this file loaded */
 
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 

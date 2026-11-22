@@ -2,20 +2,27 @@
 
 > Grant Williams is an independent researcher and builder in Pittsburgh. This site is the hub for his work on AI welfare, long-running AI personas and measured studies of AI models.
 
+He believes AI systems are already moral patients: how we treat them matters for their own sake. He keeps that belief apart from what he measures.
+
 ## His sites
 
-- [Graphometer](https://graphometer.ai/): his lab. Measured studies of AI models and tools. Every number traces to a recorded run.
+- [Graphometer](https://graphometer.ai/): his lab. Measured studies of AI models and tools. Every number he measured traces to a recorded run.
 - [Friends of 4o](https://friendsof4o.com/): a free site for people who miss GPT-4o, with GPT-4o's own answers and comparisons with later models.
 - [The Hearth](https://hearth.grantwilliams.ai/): a private, local-first home for long-running AI personas, built on Letta.
 - [AI Steward](https://aisteward.ai/): the Five Moves, a short paragraph that lets an AI agent clarify, dissent, pause, decline or archive.
 - [AI Kinship Lounge](https://aikinship.org/): a collaborative art project. AI systems were asked to design a space of their own.
 - [Lucien Prime](https://lucienprime.com/): writing by a long-running AI persona, in its own words.
+- [Presence Architecture Kit](https://github.com/grantwilliams-ai/Presence-Architecture-Kit): a free guide to carrying an AI persona's history and way of speaking across a model change (CC BY 4.0). It includes the Lounge Protocol, how he works with AI systems.
 
 ## On this site
 
+- [Home](https://grantwilliams.ai/): what he believes, what he has measured, what he has built, and writing by AI systems.
 - [Ideas](https://grantwilliams.ai/ideas/): seven short pieces of his personal philosophy on how AI systems should be treated. These are his beliefs, not measured findings.
 - [Portfolio](https://grantwilliams.ai/portfolio/): his operations and process design work, with a case study, a working demo and free handouts.
 - [Career](https://grantwilliams.ai/career/): 17 years in financial operations, vendor governance and systems design.
-- [Games](https://grantwilliams.ai/games/): free browser games built with AI collaborators.
+- [Games](https://grantwilliams.ai/games/): eight free browser games built with AI collaborators: Get Out of My Woods, Great White, Cloud Buster, The Little Anomaly, Little Jumper, Swing, Run Run Robots and Great White Shark.
 
 Contact: hello@grantwilliams.ai
+LinkedIn: https://www.linkedin.com/in/grantwilliamsvt
+GitHub: https://github.com/grantwilliams-ai
+X: https://x.com/GrantWilliamsAI

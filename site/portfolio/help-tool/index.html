@@ -438,7 +438,7 @@ function task(t, variantId) {
   let h = "";
   if (t.variants) {
     h += `<p class="switch-q">${t.question}</p><div class="switch">` + t.variants.map(x => `
-      <button data-go="${t.id}/${x.id}" aria-pressed="${v && v.id === x.id}">${x.label}<small>${x.sub}</small></button>`).join("") + `</div>`;
+      <button data-go="${t.id}/${x.id}" aria-pressed="${!!v && v.id === x.id}">${x.label}<small>${x.sub}</small></button>`).join("") + `</div>`;
   }
   if (v) {
     const key = t.id + (v.id && v !== t ? "-" + v.id : "");
@@ -477,6 +477,7 @@ function go(target, keepPlace) {
     else history.pushState(null, "", "#" + target);
   } catch (e) { /* some hosts do not allow it; the page still changes */ }
   render(!keepPlace);
+  if (keepPlace) { const b = document.querySelector('.switch button[aria-pressed="true"]'); if (b) b.focus({ preventScroll: true }); }
 }
 
 function copyText(text, btn) {
