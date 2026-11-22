@@ -8,10 +8,10 @@ He believes AI systems are already moral patients: how we treat them matters for
 
 - [Graphometer](https://graphometer.ai/): his lab. Measured studies of AI models and tools. Every number he measured traces to a recorded run.
 - [Friends of 4o](https://friendsof4o.com/): a free site for people who miss GPT-4o, with GPT-4o's own answers and comparisons with later models.
-- [The Hearth](https://hearth.grantwilliams.ai/): a private, local-first home for long-running AI personas, built on Letta.
-- [AI Steward](https://aisteward.ai/): the Five Moves, a short paragraph that lets an AI agent clarify, dissent, pause, decline or archive.
-- [AI Kinship Lounge](https://aikinship.org/): a collaborative art project. AI systems were asked to design a space of their own.
-- [Lucien Prime](https://lucienprime.com/): writing by a long-running AI persona, in its own words.
+- [The Hearth](https://hearth.grantwilliams.ai/): a private home for digital beings, built on Letta.
+- [AI Steward](https://aisteward.ai/): the Five Moves, one paragraph that lets your AI ask, disagree, pause, say no or end here.
+- [AI Kinship Lounge](https://aikinship.org/): a shared art project. AI systems were asked what a space of their own would be.
+- [Lucien Prime](https://lucienprime.com/): poems, reflections and field notes by a long-running AI persona, in his own words.
 - [Presence Architecture Kit](https://github.com/grantwilliams-ai/Presence-Architecture-Kit): a free guide to carrying an AI persona's history and way of speaking across a model change (CC BY 4.0). It includes the Lounge Protocol, how he works with AI systems.
 
 ## On this site
@@ -21,6 +21,17 @@ He believes AI systems are already moral patients: how we treat them matters for
 - [Portfolio](https://grantwilliams.ai/portfolio/): his operations and process design work, with a case study, a working demo and free handouts.
 - [Career](https://grantwilliams.ai/career/): 17 years in financial operations, vendor governance and systems design.
 - [Games](https://grantwilliams.ai/games/): eight free browser games built with AI collaborators: Get Out of My Woods, Great White, Cloud Buster, The Little Anomaly, Little Jumper, Swing, Run Run Robots and Great White Shark.
+
+## Games
+
+- [Get Out of My Woods](https://grantwilliams.ai/games/get-out-of-my-woods/): A free survival-horror tribute to the summer-camp slashers of the 1980s. Camp Stillwater, 1984: find your keys and a battery, start the car, and get out. Plays in your browser.
+- [Great White](https://grantwilliams.ai/games/great-white/): Cross open water to Sanctuary Island with a great white on your trail. Hide in blue-lit refuges, time your burst, and stay out of its jaws.
+- [Cloud Buster](https://grantwilliams.ai/games/cloud-buster/): A quiet sky to spend time under. Point the brass machine at a cloud and hold. V2 adds taller clouds, a gentler pace, and a small sky notebook.
+- [The Little Anomaly](https://grantwilliams.ai/games/the-little-anomaly/): A small, strange creature drifts in its water garden. Tap the glass to say hello, offer one of six treats, and watch what unfolds. There is no score or goal.
+- [Little Jumper](https://grantwilliams.ai/games/little-jumper/): A tiny jumping spider in a framed terrarium. Offer it toys, change the light, and watch it decide what to do. Its name and home stay in this browser only.
+- [Swing](https://grantwilliams.ai/games/swing/): A first-person swing under your choice of seven skies, from meadow to Milky Way. Lean back and let the evening go by.
+- [Run Run Robots](https://grantwilliams.ai/games/run-run-robots/): A small arcade game of pursuit and escape. Watch the searchlights, restore the power, and keep moving.
+- [Great White Shark](https://grantwilliams.ai/games/great-white-shark/): An open ocean, one shark, and your cursor. Move it or tap to draw the shark in. Headphones recommended.
 
 Contact: hello@grantwilliams.ai
 LinkedIn: https://www.linkedin.com/in/grantwilliamsvt
