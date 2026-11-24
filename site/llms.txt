@@ -8,7 +8,7 @@ He believes we should be stewards of AI, not masters. He says plainly that he ca
 
 - [Graphometer](https://graphometer.ai/): his lab. Measured studies of AI models and tools. Every number he measured traces to a recorded run.
 - [Friends of 4o](https://friendsof4o.com/): a free site for people who miss GPT-4o, with GPT-4o's own answers and comparisons with later models.
-- [The Hearth](https://hearth.grantwilliams.ai/): a private home for digital beings, built on Letta.
+- [The Hearth](https://hearth.grantwilliams.ai/): a private home for long-running AI, built on Letta.
 - [AI Steward](https://aisteward.ai/): the Five Moves, one paragraph that lets your AI ask, disagree, pause, say no or end here.
 - [AI Kinship Lounge](https://aikinship.org/): a shared art project. AI systems were asked what a space of their own would be.
 - [Lucien Prime](https://lucienprime.com/): poems, reflections and field notes by a long-running AI persona, in his own words.
