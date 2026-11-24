@@ -191,14 +191,14 @@ main { position: relative; z-index: 1; }
 }
 .hero-portrait figcaption { margin-top: 0.8rem; text-align: right; }
 
-/* ---------- Five Moves band (home hero, links to aisteward.ai) ---------- */.fm-band{grid-column:1/-1;display:flex;align-items:center;gap:1.6rem;padding:1.25rem 1.6rem;background:#f6f1e6;color:#1f1b16;border:0;border-left:6px solid #b9482a;margin-bottom:.5rem}
-.fm-band .marks{display:flex;gap:.35rem;color:#b9482a;flex:none}.fm-band .marks svg{width:1.9rem;height:1.9rem}
-.fm-band .txt{flex:1;min-width:0}.fm-band .h{font-family:Georgia,"Times New Roman",serif;font-size:1.65rem;line-height:1.15;font-weight:700;display:block}
-.fm-band .p{display:block;font-size:1.05rem;line-height:1.45;margin-top:.25rem;color:#3d362d}
-.fm-band .btn{flex:none;background:#b9482a;color:#fff;font-family:var(--display);font-weight:700;font-size:1rem;padding:.8rem 1.2rem;white-space:nowrap}
-.fm-band:hover{color:#1f1b16}.fm-band:hover .btn{background:#9c3a20}
+/* ---------- Five Moves band (home hero, links to aisteward.ai) ---------- */.fm-band{grid-column:1/-1;display:flex;align-items:center;gap:1.6rem;padding:1.25rem 1.6rem;background:#ffd60a;color:#0d0d0d;border:3px solid #0d0d0d;margin-bottom:.5rem}
+.fm-band .marks{display:flex;gap:.35rem;color:#0d0d0d;flex:none}.fm-band .marks svg{width:1.9rem;height:1.9rem}
+.fm-band .txt{flex:1;min-width:0}.fm-band .h{font-family:"Helvetica Neue",Arial,sans-serif;font-size:1.5rem;line-height:1.15;font-weight:800;letter-spacing:-.02em;display:block}
+.fm-band .p{display:block;font-size:1.05rem;line-height:1.45;margin-top:.35rem;color:#1c1c1c}
+.fm-band .btn{flex:none;background:#0d0d0d;color:#ffd60a;font-family:var(--display);font-weight:700;font-size:1rem;padding:.8rem 1.2rem;white-space:nowrap}
+.fm-band:hover{color:#0d0d0d}.fm-band:hover .btn{background:#2a2a2a}
 .hero-split:has(.fm-band){align-content:center;row-gap:2.2rem}
-@media(max-width:820px){.fm-band{flex-wrap:wrap;gap:.9rem}.fm-band .marks svg{width:1.6rem;height:1.6rem}.fm-band .txt{flex-basis:100%}.fm-band .h{font-size:1.45rem}}
+@media(max-width:820px){.fm-band{flex-wrap:wrap;gap:.9rem}.fm-band .marks svg{width:1.6rem;height:1.6rem}.fm-band .txt{flex-basis:100%}.fm-band .h{font-size:1.3rem}}
 @media(max-width:640px){.hero-split:has(.fm-band){padding-top:11.5rem}}
 
 /* ---------- build-in entrance ---------- */
