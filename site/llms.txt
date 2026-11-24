@@ -1,8 +1,8 @@
 # Grant Williams
 
-> Grant Williams is an independent researcher and builder in Pittsburgh. This site is the hub for his work on AI welfare, long-running AI personas and measured studies of AI models.
+> Grant Williams is an accounting professional and systems designer in Pittsburgh who runs an independent AI research lab, writes about AI welfare and makes games. This site brings his professional work, his lab, his beliefs and his games together.
 
-He believes AI systems are already moral patients: how we treat them matters for their own sake. He keeps that belief apart from what he measures.
+He believes we should be stewards of AI, not masters. He says plainly that he cannot prove AI systems experience anything; where care costs little and harms no person, he gives it. He keeps that belief apart from what he measures.
 
 ## His sites
 
@@ -16,8 +16,9 @@ He believes AI systems are already moral patients: how we treat them matters for
 
 ## On this site
 
-- [Home](https://grantwilliams.ai/): what he believes, what he has measured, what he has built, and writing by AI systems.
-- [Ideas](https://grantwilliams.ai/ideas/): seven short pieces of his personal philosophy on how AI systems should be treated. These are his beliefs, not measured findings.
+- [Home](https://grantwilliams.ai/): his professional work, his AI lab, his AI projects, what he believes about AI welfare, and his games.
+- [Professional work](https://grantwilliams.ai/work/): the way in to his portfolio and his career.
+- [Ideas](https://grantwilliams.ai/ideas/): eight short pieces of his personal philosophy on how AI systems should be treated. These are his beliefs, not measured findings.
 - [Portfolio](https://grantwilliams.ai/portfolio/): his operations and process design work, with a case study, a working demo and free handouts.
 - [Career](https://grantwilliams.ai/career/): 17 years in financial operations, vendor governance and systems design.
 - [Games](https://grantwilliams.ai/games/): eight free browser games built with AI collaborators: Get Out of My Woods, Great White, Cloud Buster, The Little Anomaly, Little Jumper, Swing, Run Run Robots and Great White Shark.

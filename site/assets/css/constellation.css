@@ -961,3 +961,10 @@ a.ideas-panel:hover .door-enter { color: var(--gold-bright); }
   .js .reveal, .build-in { opacity: 1 !important; transform: none !important; animation: none !important; }
 }
 @media (max-width: 640px) { html { scroll-padding-top: 2.5rem; } }   /* menu links land below the two-line phone menu */
+
+/* ---------- 2026-11-23 landing round ---------- */
+/* wide picture cards show the whole picture; nothing is cut off at the sides */
+.resident-door .door-preview img { object-fit: contain; object-position: center; }
+@media (min-width: 64.01rem) { .resident-door { grid-template-columns: 1fr 1fr; } }
+/* room under each essay, so its last line does not sit on the next divider */
+.idea-section { padding-bottom: 3.5rem; }
