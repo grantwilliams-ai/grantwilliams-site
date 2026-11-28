@@ -946,6 +946,10 @@ a.ideas-panel:hover .door-enter { color: var(--gold-bright); }
   .site-nav { gap: 0.5rem 0.7rem; }
   .site-nav a { font-size: 0.72rem; letter-spacing: 0.08em; }
 }
+/* below 480 px the seven links wrapped unevenly (one word alone on the second line); four columns give 4 + 3 (2026-11-28) */
+@media (max-width: 479px) {
+  .site-nav { display: grid; grid-template-columns: repeat(4, auto); justify-content: start; }
+}
 
 /* ---------- added 2026-11-22: skip link, hidden headings, printing ---------- */
 .skip-link {
